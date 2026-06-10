@@ -40,7 +40,7 @@
     @media print {
       /* margin: 0 tar bort webbläsarens sidhuvud/sidfot (datum, titel, URL, sidnummer) */
       @page { size: A4; margin: 0; }
-      html { font-size: 11.5px; }            /* skala ned så allt ryms på en sida */
+      html { font-size: 11px; }              /* skala ned så allt ryms på en sida */
       html, body { background: #fff !important; }
       .no-print { display: none !important; }
       main { padding: 13mm 15mm !important; min-height: 0 !important; }
@@ -209,6 +209,32 @@
             </table>
           </div>
 
+          <!-- Engångskostnader vid köp -->
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Engångskostnader vid köp</h3>
+            <table class="mt-3 w-full border-collapse text-sm">
+              <tbody class="font-light text-ink">
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Kontantinsats</td>
+                  <td class="py-2.5 text-right" id="r-cashDown">0 kr</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Lagfart <span id="r-lagfartNote" class="text-slate-400"></span></td>
+                  <td class="py-2.5 text-right" id="r-lagfart">0 kr</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Pantbrev <span id="r-pantbrevNote" class="text-slate-400"></span></td>
+                  <td class="py-2.5 text-right" id="r-pantbrev">0 kr</td>
+                </tr>
+                <tr class="border-t border-slate-200">
+                  <td class="py-2.5 pr-4 font-medium text-ink">Total engångskostnad</td>
+                  <td class="py-2.5 text-right font-medium text-ink" id="r-oneTimeTotal">0 kr</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="mt-3 text-xs font-light leading-relaxed text-slate-500" id="r-oneTimeNote"></p>
+          </div>
+
         </div>
       </section>
 
@@ -286,6 +312,66 @@
 
               <div id="borrowersList" class="mt-4 space-y-3"></div>
               <p id="borrowersNote" class="mt-2 hidden text-xs font-light text-amber-700">&nbsp;</p>
+            </div>
+
+            <!-- Lagfart -->
+            <div>
+              <label class="block text-sm font-medium text-slate-600">Lagfart</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Stämpelskatt 1,5 % av köpeskillingen + 825 kr</p>
+
+              <div id="lagfartSeg" class="mt-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" data-lagfart-mode="auto" class="seg rounded-lg px-3 py-1.5 font-medium transition">Räkna ut</button>
+                <button type="button" data-lagfart-mode="manual" class="seg rounded-lg px-3 py-1.5 font-medium transition">Ange manuellt</button>
+              </div>
+
+              <div id="lagfartManualWrap" class="relative mt-3 hidden">
+                <input id="lagfartManual" type="text" inputmode="numeric" autocomplete="off"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                  placeholder="0" />
+                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
+              </div>
+
+              <p id="lagfartDisplay" class="mt-3 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
+            </div>
+
+            <!-- Pantbrev -->
+            <div>
+              <label class="block text-sm font-medium text-slate-600">Pantbrev</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Stämpelskatt 2 % på nytt pantbrev + 375 kr</p>
+
+              <div id="pantbrevSeg" class="mt-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" data-pantbrev-mode="auto" class="seg rounded-lg px-3 py-1.5 font-medium transition">Räkna ut</button>
+                <button type="button" data-pantbrev-mode="manual" class="seg rounded-lg px-3 py-1.5 font-medium transition">Ange manuellt</button>
+              </div>
+
+              <div id="pantbrevAutoWrap" class="mt-3">
+                <label for="pantbrevExisting" class="block text-xs font-medium text-slate-500">Befintliga pantbrev</label>
+                <div class="relative mt-1.5">
+                  <input id="pantbrevExisting" type="text" inputmode="numeric" autocomplete="off"
+                    class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                    placeholder="0" />
+                  <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
+                </div>
+                <p class="mt-1.5 text-xs font-light text-slate-400">Pantbrev som redan finns på bostaden – nya pantbrev tas ut på lånebeloppet minus dessa.</p>
+              </div>
+
+              <div id="pantbrevManualWrap" class="relative mt-3 hidden">
+                <input id="pantbrevManual" type="text" inputmode="numeric" autocomplete="off"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                  placeholder="0" />
+                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
+              </div>
+
+              <p id="pantbrevDisplay" class="mt-3 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
+            </div>
+
+            <!-- Total engångskostnad -->
+            <div class="rounded-xl bg-slate-50 px-5 py-4">
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-sm font-light text-slate-500">Total engångskostnad</span>
+                <span id="oneTimeTotal" class="text-lg font-medium text-ink">0 kr</span>
+              </div>
+              <p class="mt-1 text-xs font-light text-slate-400">Kontantinsats + lagfart + pantbrev</p>
             </div>
 
           </div>
@@ -455,6 +541,23 @@
     const borrowersListEl = document.getElementById('borrowersList');
     const borrowersNoteEl = document.getElementById('borrowersNote');
 
+    // Lagfart & pantbrev (engångskostnader)
+    const LAGFART_RATE = 0.015, LAGFART_FEE = 825;
+    const PANTBREV_RATE = 0.02, PANTBREV_FEE = 375;
+    const lagfartSegEl = document.getElementById('lagfartSeg');
+    const lagfartManualWrapEl = document.getElementById('lagfartManualWrap');
+    const lagfartManualEl = document.getElementById('lagfartManual');
+    const lagfartDisplayEl = document.getElementById('lagfartDisplay');
+    const pantbrevSegEl = document.getElementById('pantbrevSeg');
+    const pantbrevAutoWrapEl = document.getElementById('pantbrevAutoWrap');
+    const pantbrevManualWrapEl = document.getElementById('pantbrevManualWrap');
+    const pantbrevExistingEl = document.getElementById('pantbrevExisting');
+    const pantbrevManualEl = document.getElementById('pantbrevManual');
+    const pantbrevDisplayEl = document.getElementById('pantbrevDisplay');
+    const oneTimeTotalEl = document.getElementById('oneTimeTotal');
+    let lagfartMode = 'auto';
+    let pantbrevMode = 'auto';
+
     const loanAmountEl = document.getElementById('loanAmount');
     const ltvValueEl = document.getElementById('ltvValue');
     const ltvBarEl = document.getElementById('ltvBar');
@@ -564,6 +667,28 @@
       if (e.target.dataset.brole === 'kr') { formatIntegerField(e.target); render(); }
     }, true);
 
+    // Lagfart & pantbrev
+    lagfartSegEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-lagfart-mode]');
+      if (!btn) return;
+      lagfartMode = btn.dataset.lagfartMode;
+      updateSegUI();
+      render();
+    });
+    pantbrevSegEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pantbrev-mode]');
+      if (!btn) return;
+      pantbrevMode = btn.dataset.pantbrevMode;
+      updateSegUI();
+      render();
+    });
+    lagfartManualEl.addEventListener('input', render);
+    lagfartManualEl.addEventListener('blur', () => { formatIntegerField(lagfartManualEl); render(); });
+    pantbrevExistingEl.addEventListener('input', render);
+    pantbrevExistingEl.addEventListener('blur', () => { formatIntegerField(pantbrevExistingEl); render(); });
+    pantbrevManualEl.addEventListener('input', render);
+    pantbrevManualEl.addEventListener('blur', () => { formatIntegerField(pantbrevManualEl); render(); });
+
     // ---- Lånedelar ----
     const nf2 = new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -611,6 +736,13 @@
     const rCostNoteEl = document.getElementById('r-costNote');
     const rBorrowersSectionEl = document.getElementById('r-borrowersSection');
     const rBorrowersEl = document.getElementById('r-borrowers');
+    const rCashDownEl = document.getElementById('r-cashDown');
+    const rLagfartEl = document.getElementById('r-lagfart');
+    const rLagfartNoteEl = document.getElementById('r-lagfartNote');
+    const rPantbrevEl = document.getElementById('r-pantbrev');
+    const rPantbrevNoteEl = document.getElementById('r-pantbrevNote');
+    const rOneTimeTotalEl = document.getElementById('r-oneTimeTotal');
+    const rOneTimeNoteEl = document.getElementById('r-oneTimeNote');
 
     document.getElementById('reportDate').textContent =
       'Upprättad ' + new Date().toLocaleDateString('sv-SE');
@@ -937,6 +1069,28 @@
       return tenths.map(t => t / 10);
     }
 
+    // Uppdaterar de segmenterade knapparnas utseende + vilka fält som visas
+    function updateSegUI() {
+      lagfartSegEl.querySelectorAll('[data-lagfart-mode]').forEach((btn) => {
+        const active = btn.dataset.lagfartMode === lagfartMode;
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('text-ink', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-slate-500', !active);
+      });
+      lagfartManualWrapEl.classList.toggle('hidden', lagfartMode !== 'manual');
+
+      pantbrevSegEl.querySelectorAll('[data-pantbrev-mode]').forEach((btn) => {
+        const active = btn.dataset.pantbrevMode === pantbrevMode;
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('text-ink', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-slate-500', !active);
+      });
+      pantbrevAutoWrapEl.classList.toggle('hidden', pantbrevMode !== 'auto');
+      pantbrevManualWrapEl.classList.toggle('hidden', pantbrevMode !== 'manual');
+    }
+
     // Räknar om härledda värden för alla lånedelar: snittränta, andelar och validering
     function updatePartsDerived() {
       const rows = Array.from(partsListEl.children);
@@ -1124,6 +1278,49 @@
       rAmortEl.textContent = nf1.format(amortPct) + ' %';
       rDriftEl.textContent = formatKr(drift) + '/mån';
 
+      // ---- Engångskostnader: lagfart, pantbrev, total ----
+      const lagfartAuto = price > 0 ? price * LAGFART_RATE + LAGFART_FEE : 0;
+      const lagfart = lagfartMode === 'manual' ? parseNumber(lagfartManualEl.value) : lagfartAuto;
+
+      const existingPant = parseNumber(pantbrevExistingEl.value);
+      const newPant = Math.max(currentLoan - existingPant, 0);
+      const pantbrevAuto = newPant > 0 ? newPant * PANTBREV_RATE + PANTBREV_FEE : 0;
+      const pantbrev = pantbrevMode === 'manual' ? parseNumber(pantbrevManualEl.value) : pantbrevAuto;
+
+      const oneTime = dpKr + lagfart + pantbrev;
+
+      // Live-texter under inmatningen
+      lagfartDisplayEl.textContent = lagfartMode === 'manual'
+        ? 'Manuellt angiven kostnad.'
+        : (price > 0
+            ? 'Beräknad lagfart ' + formatKr(lagfart) + ' (1,5 % × ' + formatKr(price) + ' + ' + formatKr(LAGFART_FEE) + ').'
+            : 'Fyll i köpeskilling för att beräkna lagfarten.');
+
+      pantbrevDisplayEl.textContent = pantbrevMode === 'manual'
+        ? 'Manuellt angiven kostnad.'
+        : (currentLoan > 0
+            ? (newPant > 0
+                ? 'Nytt pantbrev ' + formatKr(newPant) + ' → ' + formatKr(pantbrev) + ' (2 % + ' + formatKr(PANTBREV_FEE) + ').'
+                : 'Befintliga pantbrev täcker hela lånet – inga nya pantbrev behövs.')
+            : 'Fyll i lånebelopp för att beräkna pantbrev.');
+
+      oneTimeTotalEl.textContent = formatKr(oneTime);
+
+      // Sammanställning (PDF)
+      rCashDownEl.textContent = formatKr(dpKr);
+      rLagfartEl.textContent = formatKr(lagfart);
+      rLagfartNoteEl.textContent = lagfartMode === 'manual' ? '(manuell)' : '(1,5 % + 825 kr)';
+      rPantbrevEl.textContent = formatKr(pantbrev);
+      rPantbrevNoteEl.textContent = pantbrevMode === 'manual'
+        ? '(manuell)'
+        : (newPant > 0 ? '(2 % på nytt + 375 kr)' : '(inga nya)');
+      rOneTimeTotalEl.textContent = formatKr(oneTime);
+      rOneTimeNoteEl.textContent = oneTime > 0
+        ? 'Kontant du behöver vid köpet: kontantinsats ' + formatKr(dpKr) +
+          ' + lagfart ' + formatKr(lagfart) + ' + pantbrev ' + formatKr(pantbrev) +
+          ' = ' + formatKr(oneTime) + '.'
+        : '';
+
       // ---- Förhandsvisning: 36 månader med krympande skuld ----
       trendData = [];
       let debt = currentLoan;
@@ -1297,6 +1494,7 @@
     operatingEl.value = nf0.format(4000);
     numBorrowersEl.value = '2';
     renderBorrowers();
+    updateSegUI();
 
     addPart('3,5', 'rorlig');
     const firstRow = partsListEl.querySelector('[data-id]');
