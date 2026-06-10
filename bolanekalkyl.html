@@ -94,10 +94,18 @@
             </button>
           </div>
 
-          <!-- Brutto -->
-          <div class="mt-8 flex items-baseline justify-between gap-4 border-b border-slate-100 pb-6">
-            <span class="text-sm font-light text-slate-500">Månadskostnad (brutto)</span>
-            <span id="r-gross" class="text-3xl font-light tracking-tight text-ink">0 kr</span>
+          <!-- Brutto & netto -->
+          <div class="mt-8 grid grid-cols-1 gap-6 border-b border-slate-100 pb-6 sm:grid-cols-2 sm:gap-8">
+            <div>
+              <p class="text-sm font-light text-slate-500">Månadskostnad (brutto)</p>
+              <p id="r-gross" class="mt-1 text-3xl font-light tracking-tight text-ink">0 kr</p>
+              <p class="mt-1 text-xs font-light text-slate-400">totalt per månad</p>
+            </div>
+            <div class="sm:border-l sm:border-slate-100 sm:pl-8">
+              <p class="text-sm font-light text-slate-500">Månadskostnad (netto)</p>
+              <p id="r-net" class="mt-1 text-3xl font-light tracking-tight text-ink">0 kr</p>
+              <p class="mt-1 text-xs font-light text-slate-400">efter ränteavdrag</p>
+            </div>
           </div>
 
           <!-- Bostad & finansiering -->
@@ -717,6 +725,7 @@
 
     // Sammanställning (report)
     const rGrossEl = document.getElementById('r-gross');
+    const rNetEl = document.getElementById('r-net');
     const rPriceEl = document.getElementById('r-price');
     const rDownpaymentEl = document.getElementById('r-downpayment');
     const rLoanEl = document.getElementById('r-loan');
@@ -1269,7 +1278,11 @@
         rBorrowersEl.innerHTML = '';
       }
 
+      // Netto = brutto minus ränteavdraget (det som faktiskt lämnar plånboken)
+      const netMonthly = gross - deduction / 12;
+
       rGrossEl.textContent = formatKr(gross);
+      rNetEl.textContent = formatKr(netMonthly);
       rPriceEl.textContent = formatKr(price);
       rDownpaymentEl.textContent = formatKr(dpKr) +
         (price > 0 ? ' (' + nf1.format(dpPct) + ' %)' : '');
