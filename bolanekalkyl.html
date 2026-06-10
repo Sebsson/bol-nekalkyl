@@ -63,6 +63,13 @@
       #report .gap-y-5 { row-gap: 0.7rem !important; }
       #report td, #report th { padding-top: 0.32rem !important; padding-bottom: 0.32rem !important; }
       tr { break-inside: avoid; }
+      /* Tydligare, lite fetare linjer i den exporterade sammanställningen */
+      #report .border-t, #report .border-b, #report .sm\:border-l {
+        border-color: #cbd5e1 !important;
+      }
+      #report .border-t { border-top-width: 1.5px !important; }
+      #report .border-b { border-bottom-width: 1.5px !important; }
+      #report .sm\:border-l { border-left-width: 1.5px !important; }
     }
   </style>
 </head>
@@ -86,6 +93,7 @@
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 class="text-xl font-light tracking-tight text-ink">Bolånekalkyl &ndash; sammanställning</h2>
+              <p id="r-objectName" class="mt-1 text-base font-normal text-ink"></p>
               <p id="reportDate" class="mt-1 text-xs font-light text-slate-400"></p>
             </div>
             <button id="exportPdf" type="button"
@@ -94,37 +102,44 @@
             </button>
           </div>
 
-          <!-- Brutto -->
-          <div class="mt-8 flex items-baseline justify-between gap-4 border-b border-slate-100 pb-6">
-            <span class="text-sm font-light text-slate-500">Månadskostnad (brutto)</span>
-            <span id="r-gross" class="text-3xl font-light tracking-tight text-ink">0 kr</span>
+          <!-- Brutto & netto -->
+          <div class="mt-8 grid grid-cols-1 gap-6 border-b border-slate-100 pb-6 sm:grid-cols-2 sm:gap-8">
+            <div>
+              <p class="text-sm font-light text-slate-500">Månadskostnad (brutto)</p>
+              <p id="r-gross" class="mt-1 text-3xl font-light tracking-tight text-ink">0 kr</p>
+              <p class="mt-1 text-xs font-light text-slate-400">totalt per månad</p>
+            </div>
+            <div class="sm:border-l sm:border-slate-100 sm:pl-8">
+              <p class="text-sm font-light text-slate-500">Månadskostnad (netto)</p>
+              <p id="r-net" class="mt-1 text-3xl font-light tracking-tight text-ink">0 kr</p>
+              <p class="mt-1 text-xs font-light text-slate-400">efter ränteavdrag</p>
+            </div>
           </div>
 
           <!-- Bostad & finansiering -->
-          <div class="mt-7 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3">
-            <div>
-              <p class="text-xs font-light text-slate-400">Köpeskilling</p>
-              <p id="r-price" class="mt-1 text-base font-normal text-ink">0 kr</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Kontantinsats</p>
-              <p id="r-downpayment" class="mt-1 text-base font-normal text-ink">0 kr</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Lånebelopp</p>
-              <p id="r-loan" class="mt-1 text-base font-normal text-ink">0 kr</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Belåningsgrad</p>
-              <p id="r-ltv" class="mt-1 text-base font-normal text-ink">0,0 %</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Amorteringstakt</p>
-              <p id="r-amort" class="mt-1 text-base font-normal text-ink">0 %</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Driftkostnad</p>
-              <p id="r-drift" class="mt-1 text-base font-normal text-ink">0 kr/mån</p>
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Bostad &amp; finansiering</h3>
+            <div class="mt-3 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3">
+              <div>
+                <p class="text-xs font-light text-slate-400">Köpeskilling</p>
+                <p id="r-price" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Kontantinsats</p>
+                <p id="r-downpayment" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Lånebelopp</p>
+                <p id="r-loan" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Belåningsgrad</p>
+                <p id="r-ltv" class="mt-1 text-base font-normal text-ink">0,0 %</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Amorteringstakt</p>
+                <p id="r-amort" class="mt-1 text-base font-normal text-ink">0 %</p>
+              </div>
             </div>
           </div>
 
@@ -169,8 +184,16 @@
                   <td class="py-2.5 text-right" id="r-driftKr">0 kr</td>
                 </tr>
                 <tr class="border-t border-slate-200">
-                  <td class="py-2.5 pr-4 font-medium text-ink">Total månadskostnad</td>
+                  <td class="py-2.5 pr-4 font-medium text-ink">Månadskostnad (brutto)</td>
                   <td class="py-2.5 text-right font-medium text-ink" id="r-grossRow">0 kr</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Ränteavdrag <span class="text-slate-400">(skattereduktion)</span></td>
+                  <td class="py-2.5 text-right text-slate-500" id="r-deduction">0 kr</td>
+                </tr>
+                <tr class="border-t border-slate-200">
+                  <td class="py-2.5 pr-4 font-medium text-ink">Månadskostnad (netto)</td>
+                  <td class="py-2.5 text-right font-medium text-ink" id="r-netRow">0 kr</td>
                 </tr>
               </tbody>
             </table>
@@ -243,6 +266,17 @@
         <!-- Inmatning -->
         <section class="lg:col-span-3">
           <div class="space-y-8">
+
+            <!-- Objektets namn -->
+            <div>
+              <label for="objectName" class="block text-sm font-medium text-slate-600">Objektets namn</label>
+              <p class="mt-1 text-xs font-light text-slate-400">T.ex. adress eller mäklarens rubrik &ndash; visas i sammanställningen</p>
+              <div class="relative mt-3">
+                <input id="objectName" type="text" autocomplete="off" maxlength="80"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                  placeholder="Namnlöst objekt" />
+              </div>
+            </div>
 
             <!-- Köpeskilling -->
             <div>
@@ -532,6 +566,7 @@
     }
 
     // Element
+    const objectNameEl = document.getElementById('objectName');
     const priceEl = document.getElementById('price');
     const dpKrEl = document.getElementById('downPaymentKr');
     const dpPctEl = document.getElementById('downPaymentPct');
@@ -629,6 +664,12 @@
     }
 
     // ---- Händelser ----
+    // Objektets namn – speglas direkt i sammanställningens rubrik
+    function syncObjectName() {
+      rObjectNameEl.textContent = objectNameEl.value.trim();
+    }
+    objectNameEl.addEventListener('input', syncObjectName);
+
     priceEl.addEventListener('input', () => {
       // Behåll procent som ledande om den är ifylld, annars uppdatera procent från kr
       if (parseNumber(dpPctEl.value) > 0) {
@@ -716,13 +757,14 @@
     const driftMonthlyEl = document.getElementById('driftMonthly');
 
     // Sammanställning (report)
+    const rObjectNameEl = document.getElementById('r-objectName');
     const rGrossEl = document.getElementById('r-gross');
+    const rNetEl = document.getElementById('r-net');
     const rPriceEl = document.getElementById('r-price');
     const rDownpaymentEl = document.getElementById('r-downpayment');
     const rLoanEl = document.getElementById('r-loan');
     const rLtvEl = document.getElementById('r-ltv');
     const rAmortEl = document.getElementById('r-amort');
-    const rDriftEl = document.getElementById('r-drift');
     const rPartsEl = document.getElementById('r-parts');
     const rPartsSumEl = document.getElementById('r-partsSum');
     const rAvgRateEl = document.getElementById('r-avgRate');
@@ -730,6 +772,8 @@
     const rAmortKrEl = document.getElementById('r-amortKr');
     const rDriftKrEl = document.getElementById('r-driftKr');
     const rGrossRowEl = document.getElementById('r-grossRow');
+    const rDeductionEl = document.getElementById('r-deduction');
+    const rNetRowEl = document.getElementById('r-netRow');
     const rSavingEl = document.getElementById('r-saving');
     const rRealCostEl = document.getElementById('r-realCost');
     const rRealCostAfterEl = document.getElementById('r-realCostAfter');
@@ -1235,6 +1279,8 @@
       rAmortKrEl.textContent = formatKr(monthlyAmort);
       rDriftKrEl.textContent = formatKr(drift);
       rGrossRowEl.textContent = formatKr(gross);
+      rDeductionEl.textContent = (deduction > 0 ? '− ' : '') + formatKr(deduction / 12);
+      rNetRowEl.textContent = formatKr(gross - deduction / 12);
       rSavingEl.textContent = formatKr(monthlyAmort);
       rRealCostEl.textContent = formatKr(realCost);
       rRealCostAfterEl.textContent = formatKr(realCostAfter);
@@ -1269,14 +1315,17 @@
         rBorrowersEl.innerHTML = '';
       }
 
+      // Netto = brutto minus ränteavdraget (det som faktiskt lämnar plånboken)
+      const netMonthly = gross - deduction / 12;
+
       rGrossEl.textContent = formatKr(gross);
+      rNetEl.textContent = formatKr(netMonthly);
       rPriceEl.textContent = formatKr(price);
       rDownpaymentEl.textContent = formatKr(dpKr) +
         (price > 0 ? ' (' + nf1.format(dpPct) + ' %)' : '');
       rLoanEl.textContent = formatKr(currentLoan);
       rLtvEl.textContent = nf1.format(ltv) + ' %';
       rAmortEl.textContent = nf1.format(amortPct) + ' %';
-      rDriftEl.textContent = formatKr(drift) + '/mån';
 
       // ---- Engångskostnader: lagfart, pantbrev, total ----
       const lagfartAuto = price > 0 ? price * LAGFART_RATE + LAGFART_FEE : 0;
@@ -1501,6 +1550,7 @@
     firstRow.querySelector('[data-role="kr"]').value = nf0.format(2975000);
 
     syncFromKr();   // fyll kontantinsats i procent
+    syncObjectName();
     render();
   </script>
 </body>
