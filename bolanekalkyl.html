@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolånekalkyl</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            ink: '#1f2933',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    body { background-color: #fbfcfd; }
+    /* Dölj spinnerpilar på nummerfält */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+    .field-input:focus { outline: none; border-color: #94a3b8; box-shadow: 0 0 0 4px rgba(148,163,184,0.12); }
+
+    /* Diagram – hover */
+    .trend-bar { transition: filter .15s ease; cursor: pointer; }
+    .trend-bar:hover { filter: brightness(0.82); }
+    .chart-hit { cursor: pointer; }
+
+    /* Utskrift / PDF-export */
+    @media print {
+      /* margin: 0 tar bort webbläsarens sidhuvud/sidfot (datum, titel, URL, sidnummer) */
+      @page { size: A4; margin: 0; }
+      html { font-size: 11.5px; }            /* skala ned så allt ryms på en sida */
+      html, body { background: #fff !important; }
+      .no-print { display: none !important; }
+      main { padding: 13mm 15mm !important; min-height: 0 !important; }
+      main .mx-auto { max-width: none !important; }
+      #report { margin: 0 !important; }
+      /* Ingen ram runt sammanställningen vid utskrift */
+      #report .report-card {
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+      /* Tightare luft så innehållet får plats på en sida */
+      #report .mt-8 { margin-top: 1.1rem !important; }
+      #report .mt-9 { margin-top: 1.1rem !important; }
+      #report .mt-7 { margin-top: 0.9rem !important; }
+      #report .pb-6 { padding-bottom: 0.7rem !important; }
+      #report .mt-5 { margin-top: 0.6rem !important; }
+      #report .gap-y-5 { row-gap: 0.7rem !important; }
+      #report td, #report th { padding-top: 0.32rem !important; padding-bottom: 0.32rem !important; }
+      tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body class="font-sans text-ink">
+  <main class="min-h-screen w-full px-6 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl">
+
+      <!-- Rubrik -->
+      <header class="no-print mb-14">
+        <p class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Kalkyl</p>
+        <h1 class="mt-3 text-3xl md:text-4xl font-light tracking-tight text-ink">Bolånekalkyl</h1>
+        <p class="mt-3 text-base font-light leading-relaxed text-slate-500 max-w-xl">
+          Fyll i uppgifterna så räknar vi fram lånebelopp, belåningsgrad och månadskostnad direkt.
+        </p>
+      </header>
+
+      <!-- Sammanställning (visas snyggt överst, även vid PDF-export) -->
+      <section id="report" class="mb-14">
+        <div class="report-card rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10">
+
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-light tracking-tight text-ink">Bolånekalkyl &ndash; sammanställning</h2>
+              <p id="reportDate" class="mt-1 text-xs font-light text-slate-400"></p>
+            </div>
+            <button id="exportPdf" type="button"
+              class="no-print inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
+              Exportera PDF
+            </button>
+          </div>
+
+          <!-- Brutto -->
+          <div class="mt-8 flex items-baseline justify-between gap-4 border-b border-slate-100 pb-6">
+            <span class="text-sm font-light text-slate-500">Månadskostnad (brutto)</span>
+            <span id="r-gross" class="text-3xl font-light tracking-tight text-ink">0 kr</span>
+          </div>
+
+          <!-- Bostad & finansiering -->
+          <div class="mt-7 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3">
+            <div>
+              <p class="text-xs font-light text-slate-400">Köpeskilling</p>
+              <p id="r-price" class="mt-1 text-base font-normal text-ink">0 kr</p>
+            </div>
+            <div>
+              <p class="text-xs font-light text-slate-400">Kontantinsats</p>
+              <p id="r-downpayment" class="mt-1 text-base font-normal text-ink">0 kr</p>
+            </div>
+            <div>
+              <p class="text-xs font-light text-slate-400">Lånebelopp</p>
+              <p id="r-loan" class="mt-1 text-base font-normal text-ink">0 kr</p>
+            </div>
+            <div>
+              <p class="text-xs font-light text-slate-400">Belåningsgrad</p>
+              <p id="r-ltv" class="mt-1 text-base font-normal text-ink">0,0 %</p>
+            </div>
+            <div>
+              <p class="text-xs font-light text-slate-400">Amorteringstakt</p>
+              <p id="r-amort" class="mt-1 text-base font-normal text-ink">0 %</p>
+            </div>
+            <div>
+              <p class="text-xs font-light text-slate-400">Driftkostnad</p>
+              <p id="r-drift" class="mt-1 text-base font-normal text-ink">0 kr/mån</p>
+            </div>
+          </div>
+
+          <!-- Lånedelar -->
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Lånedelar</h3>
+            <table class="mt-3 w-full border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-left">
+                  <th class="py-2 pr-4 font-medium text-slate-500">Belopp</th>
+                  <th class="py-2 pr-4 font-medium text-slate-500">Andel</th>
+                  <th class="py-2 pr-4 font-medium text-slate-500">Ränta</th>
+                  <th class="py-2 font-medium text-slate-500">Bindningstid</th>
+                </tr>
+              </thead>
+              <tbody id="r-parts" class="font-light text-ink"></tbody>
+              <tfoot>
+                <tr class="border-t border-slate-200">
+                  <td class="py-2.5 pr-4 font-medium text-ink" id="r-partsSum">0 kr</td>
+                  <td class="py-2.5 pr-4 text-slate-400" colspan="2">Viktad snittränta</td>
+                  <td class="py-2.5 font-medium text-ink" id="r-avgRate">0,00 %</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Månadskostnad – nedbrytning -->
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Månadskostnad</h3>
+            <table class="mt-3 w-full border-collapse text-sm">
+              <tbody class="font-light text-ink">
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Ränta <span class="text-slate-400">(före ränteavdrag)</span></td>
+                  <td class="py-2.5 text-right" id="r-interest">0 kr</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Amortering</td>
+                  <td class="py-2.5 text-right" id="r-amortKr">0 kr</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Driftkostnad</td>
+                  <td class="py-2.5 text-right" id="r-driftKr">0 kr</td>
+                </tr>
+                <tr class="border-t border-slate-200">
+                  <td class="py-2.5 pr-4 font-medium text-ink">Total månadskostnad</td>
+                  <td class="py-2.5 text-right font-medium text-ink" id="r-grossRow">0 kr</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="mt-5 space-y-3 rounded-xl bg-slate-50 px-5 py-4">
+              <div class="flex items-baseline justify-between gap-4">
+                <span class="text-sm font-light text-slate-500">Påtvingat sparande <span class="text-slate-400">(amortering)</span></span>
+                <span class="text-sm font-medium text-ink" id="r-saving">0 kr</span>
+              </div>
+              <div class="flex items-baseline justify-between gap-4">
+                <span class="text-sm font-light text-slate-500">Faktisk kostnad <span class="text-slate-400">(ränta + drift)</span></span>
+                <span class="text-sm font-medium text-ink" id="r-realCost">0 kr</span>
+              </div>
+              <div class="flex items-baseline justify-between gap-4 border-t border-slate-200 pt-3">
+                <span class="text-sm font-light text-slate-500">Faktisk kostnad efter ränteavdrag</span>
+                <span class="text-sm font-medium text-ink" id="r-realCostAfter">0 kr</span>
+              </div>
+            </div>
+
+            <p class="mt-3 text-xs font-light leading-relaxed text-slate-500" id="r-costNote"></p>
+          </div>
+
+          <!-- Låntagare -->
+          <div id="r-borrowersSection" class="mt-9 hidden">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Låntagare</h3>
+            <table class="mt-3 w-full border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-left">
+                  <th class="py-2 pr-4 font-medium text-slate-500">Person</th>
+                  <th class="py-2 pr-4 font-medium text-slate-500">Andel</th>
+                  <th class="py-2 pr-4 font-medium text-slate-500">Andel av lån</th>
+                  <th class="py-2 font-medium text-slate-500">Ränteavdrag</th>
+                </tr>
+              </thead>
+              <tbody id="r-borrowers" class="font-light text-ink"></tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+      <div class="no-print grid grid-cols-1 lg:grid-cols-5 gap-10">
+
+        <!-- Inmatning -->
+        <section class="lg:col-span-3">
+          <div class="space-y-8">
+
+            <!-- Köpeskilling -->
+            <div>
+              <label for="price" class="block text-sm font-medium text-slate-600">Köpeskilling</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Bostadens pris</p>
+              <div class="relative mt-3">
+                <input id="price" type="text" inputmode="numeric" autocomplete="off"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                  placeholder="0" />
+                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
+              </div>
+            </div>
+
+            <!-- Kontantinsats -->
+            <div>
+              <label class="block text-sm font-medium text-slate-600">Kontantinsats</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Ange i kronor eller procent &ndash; fälten räknar om varandra</p>
+              <div class="mt-3 grid grid-cols-2 gap-4">
+                <div class="relative">
+                  <input id="downPaymentKr" type="text" inputmode="numeric" autocomplete="off"
+                    class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                    placeholder="0" />
+                  <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
+                </div>
+                <div class="relative">
+                  <input id="downPaymentPct" type="text" inputmode="decimal" autocomplete="off"
+                    class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-10 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                    placeholder="0" />
+                  <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Amorteringsprocent -->
+            <div>
+              <label for="amortPct" class="block text-sm font-medium text-slate-600">Amorteringstakt</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Årlig amortering du själv väljer</p>
+              <div class="relative mt-3">
+                <input id="amortPct" type="text" inputmode="decimal" autocomplete="off"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-10 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                  placeholder="0" />
+                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">%</span>
+              </div>
+            </div>
+
+            <!-- Driftkostnad -->
+            <div>
+              <label for="operatingCost" class="block text-sm font-medium text-slate-600">Driftkostnad</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Löpande kostnad per månad</p>
+              <div class="relative mt-3">
+                <input id="operatingCost" type="text" inputmode="numeric" autocomplete="off"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-20 text-lg font-normal text-ink transition placeholder:text-slate-300"
+                  placeholder="0" />
+                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr/mån</span>
+              </div>
+            </div>
+
+            <!-- Låntagare -->
+            <div>
+              <label for="numBorrowers" class="block text-sm font-medium text-slate-600">Låntagare</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Ränteavdraget (30 % upp till 100 000 kr/år) gäller per person</p>
+              <div class="relative mt-3">
+                <input id="numBorrowers" type="number" min="1" max="6" step="1"
+                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-24 text-lg font-normal text-ink transition placeholder:text-slate-300" />
+                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">personer</span>
+              </div>
+
+              <div id="borrowersList" class="mt-4 space-y-3"></div>
+              <p id="borrowersNote" class="mt-2 hidden text-xs font-light text-amber-700">&nbsp;</p>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Resultat -->
+        <aside class="lg:col-span-2">
+          <div class="lg:sticky lg:top-16 rounded-2xl border border-slate-200/80 bg-white p-7">
+
+            <!-- Huvudfokus: månadskostnad -->
+            <p class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Månadskostnad</p>
+            <p id="grossMonthly" class="mt-2 text-4xl font-light tracking-tight text-ink md:text-5xl">0 kr</p>
+            <p class="mt-1 text-xs font-light text-slate-400">brutto per månad</p>
+
+            <!-- Nedbrytning -->
+            <div class="mt-6 space-y-4">
+              <div>
+                <div class="flex items-baseline justify-between gap-3">
+                  <span class="text-sm font-light text-slate-500">Amortering</span>
+                  <span id="amortMonthly" class="text-sm font-medium text-ink">0 kr</span>
+                </div>
+                <p class="mt-1 text-xs font-light leading-relaxed text-slate-400">
+                  Påtvingat sparande &ndash; bygger ditt egna kapital snarare än en ren kostnad.
+                </p>
+              </div>
+
+              <div>
+                <div class="flex items-baseline justify-between gap-3">
+                  <span class="text-sm font-light text-slate-500">Ränta</span>
+                  <span id="interestMonthly" class="text-sm font-medium text-ink">0 kr</span>
+                </div>
+                <p class="mt-1 text-xs font-light leading-relaxed text-slate-400">Räntekostnad före ränteavdrag.</p>
+                <p id="interestAfter" class="mt-0.5 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
+              </div>
+
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-sm font-light text-slate-500">Driftkostnad</span>
+                <span id="driftMonthly" class="text-sm font-medium text-ink">0 kr</span>
+              </div>
+            </div>
+
+            <div class="my-7 h-px bg-slate-100"></div>
+
+            <h2 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Sammanfattning</h2>
+
+            <div class="mt-6 space-y-7">
+              <div>
+                <p class="text-sm font-light text-slate-500">Lånebelopp</p>
+                <p id="loanAmount" class="mt-1 text-2xl font-light tracking-tight text-ink">0 kr</p>
+              </div>
+
+              <div class="h-px bg-slate-100"></div>
+
+              <div>
+                <div class="flex items-baseline justify-between">
+                  <p class="text-sm font-light text-slate-500">Belåningsgrad</p>
+                  <p id="ltvValue" class="text-2xl font-light tracking-tight text-ink">0,0&nbsp;%</p>
+                </div>
+                <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div id="ltvBar" class="h-full rounded-full bg-slate-400 transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="ltvNote" class="mt-2 text-xs font-light text-slate-400">&nbsp;</p>
+              </div>
+
+              <div class="h-px bg-slate-100"></div>
+
+              <div>
+                <p class="text-sm font-light text-slate-500">Viktad snittränta</p>
+                <p id="avgRate" class="mt-1 text-2xl font-light tracking-tight text-ink">0,00&nbsp;%</p>
+                <p id="avgRateNote" class="mt-1 text-xs font-light text-slate-400">&nbsp;</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+
+      <!-- Lånedelar -->
+      <section class="no-print mt-16">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-light tracking-tight text-ink">Lånedelar</h2>
+            <p class="mt-1 text-sm font-light text-slate-500">Dela upp lånet i delar med egen ränta och bindningstid.</p>
+          </div>
+          <p id="partsTotal" class="text-xs font-light text-slate-400">&nbsp;</p>
+        </div>
+
+        <div id="partsList" class="mt-6 space-y-3"></div>
+
+        <div id="partsWarning" class="mt-4 hidden items-start gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm font-light text-amber-800">
+          <span id="partsWarningText"></span>
+        </div>
+
+        <button id="addPart" type="button"
+          class="mt-5 inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-ink">
+          <span class="text-base leading-none">+</span> Lägg till lånedel
+        </button>
+      </section>
+
+      <!-- Förhandsvisning: utveckling över tre år -->
+      <section class="no-print mt-16">
+        <h2 class="text-lg font-light tracking-tight text-ink">Utveckling &ndash; tre första åren</h2>
+        <p class="mt-1 text-sm font-light text-slate-500">
+          När skulden amorteras ned sjunker räntan, så månadskostnaden trappar ned något över tid.
+        </p>
+
+        <div class="mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
+          <div id="trendStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4"></div>
+
+          <div class="mt-7">
+            <div id="trendChart" class="flex h-28 items-end gap-px"></div>
+            <div class="mt-2 flex justify-between text-xs font-light text-slate-400">
+              <span>År 1</span>
+              <span>År 2</span>
+              <span>År 3</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Lagstadgat amorteringskrav -->
+      <section class="no-print mt-16">
+        <h2 class="text-lg font-light tracking-tight text-ink">Med lagstadgat amorteringskrav</h2>
+        <p class="mt-1 text-sm font-light text-slate-500">
+          2 % per år tills belåningsgraden når 70 %, därefter 1 % tills 50 %, sedan inget krav.
+          Månadskostnaden trappas ned i steg när gränserna passeras.
+        </p>
+
+        <div class="mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
+          <div id="amortReqStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3"></div>
+          <div id="amortReqChart" class="mt-7"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    // ---- Svensk formatering ----
+    const nf0 = new Intl.NumberFormat('sv-SE', { maximumFractionDigits: 0 });
+    const nf1 = new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+    const NBSP = ' ';
+
+    function formatKr(value) {
+      if (!isFinite(value)) value = 0;
+      return nf0.format(Math.round(value)) + NBSP + 'kr';
+    }
+
+    // Tolkar ett inmatat strängvärde (med mellanslag, komma osv) till tal
+    function parseNumber(str) {
+      if (typeof str !== 'string') return 0;
+      const cleaned = str.replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
+      const n = parseFloat(cleaned);
+      return isFinite(n) ? n : 0;
+    }
+
+    // Element
+    const priceEl = document.getElementById('price');
+    const dpKrEl = document.getElementById('downPaymentKr');
+    const dpPctEl = document.getElementById('downPaymentPct');
+    const amortEl = document.getElementById('amortPct');
+    const operatingEl = document.getElementById('operatingCost');
+    const numBorrowersEl = document.getElementById('numBorrowers');
+    const borrowersListEl = document.getElementById('borrowersList');
+    const borrowersNoteEl = document.getElementById('borrowersNote');
+
+    const loanAmountEl = document.getElementById('loanAmount');
+    const ltvValueEl = document.getElementById('ltvValue');
+    const ltvBarEl = document.getElementById('ltvBar');
+    const ltvNoteEl = document.getElementById('ltvNote');
+
+    // Formaterar ett heltalsfält med mellanslag, behåller markörposition rimligt
+    function formatIntegerField(el) {
+      const raw = parseNumber(el.value);
+      el.value = raw > 0 ? nf0.format(Math.round(raw)) : '';
+    }
+
+    let currentLoan = 0;
+
+    function render() {
+      const price = parseNumber(priceEl.value);
+      const downPayment = parseNumber(dpKrEl.value);
+
+      const loan = Math.max(price - downPayment, 0);
+      currentLoan = loan;
+      loanAmountEl.textContent = formatKr(loan);
+
+      let ltv = 0;
+      if (price > 0) ltv = (loan / price) * 100;
+
+      ltvValueEl.textContent = nf1.format(ltv).replace('-', '') + ' %';
+      ltvBarEl.style.width = Math.min(ltv, 100) + '%';
+
+      // Diskret färgsignal + notis utan att bryta lugnet
+      let note = ' ';
+      let barColor = '#94a3b8'; // slate-400
+      if (price > 0) {
+        if (ltv > 85) {
+          note = 'Belåningsgraden överstiger 85 %.';
+          barColor = '#b45309'; // dämpad amber
+        } else if (ltv > 70) {
+          note = 'Amorteringskrav gäller vanligtvis över 70 %.';
+          barColor = '#64748b';
+        } else {
+          note = 'Belåningsgrad inom normalt intervall.';
+          barColor = '#64748b';
+        }
+      }
+      ltvNoteEl.textContent = note;
+      ltvBarEl.style.backgroundColor = barColor;
+
+      // Lånedelarna beror på det totala lånet
+      updatePartsDerived();
+    }
+
+    // ---- Kontantinsats: kr <-> % synkronisering ----
+    function syncFromKr() {
+      const price = parseNumber(priceEl.value);
+      const dpKr = parseNumber(dpKrEl.value);
+      if (price > 0) {
+        const pct = (dpKr / price) * 100;
+        dpPctEl.value = dpKr > 0 ? nf1.format(pct) : '';
+      } else {
+        dpPctEl.value = '';
+      }
+    }
+
+    function syncFromPct() {
+      const price = parseNumber(priceEl.value);
+      const pct = parseNumber(dpPctEl.value);
+      if (price > 0) {
+        const dpKr = Math.round((pct / 100) * price);
+        dpKrEl.value = pct > 0 ? nf0.format(dpKr) : '';
+      }
+    }
+
+    // ---- Händelser ----
+    priceEl.addEventListener('input', () => {
+      // Behåll procent som ledande om den är ifylld, annars uppdatera procent från kr
+      if (parseNumber(dpPctEl.value) > 0) {
+        syncFromPct();
+      } else {
+        syncFromKr();
+      }
+      render();
+    });
+    priceEl.addEventListener('blur', () => { formatIntegerField(priceEl); render(); });
+
+    dpKrEl.addEventListener('input', () => { syncFromKr(); render(); });
+    dpKrEl.addEventListener('blur', () => { formatIntegerField(dpKrEl); render(); });
+
+    dpPctEl.addEventListener('input', () => { syncFromPct(); render(); });
+
+    amortEl.addEventListener('input', render);
+    operatingEl.addEventListener('input', render);
+    operatingEl.addEventListener('blur', () => { formatIntegerField(operatingEl); render(); });
+
+    // Låntagare: antal + fördelning
+    numBorrowersEl.addEventListener('input', () => { renderBorrowers(); render(); });
+    numBorrowersEl.addEventListener('change', () => {
+      numBorrowersEl.value = getBorrowerCount();
+      renderBorrowers();
+      render();
+    });
+    borrowersListEl.addEventListener('input', (e) => {
+      const row = e.target.closest('[data-bid]');
+      if (!row) return;
+      if (e.target.dataset.brole === 'kr') syncBorrowerFromKr(row);
+      else if (e.target.dataset.brole === 'pct') syncBorrowerFromPct(row);
+      render();
+    });
+    borrowersListEl.addEventListener('blur', (e) => {
+      if (e.target.dataset.brole === 'kr') { formatIntegerField(e.target); render(); }
+    }, true);
+
+    // ---- Lånedelar ----
+    const nf2 = new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const TERMS = [
+      { value: 'rorlig', label: 'Rörlig' },
+      { value: '3m', label: '3 mån' },
+      { value: '1y', label: '1 år' },
+      { value: '2y', label: '2 år' },
+      { value: '3y', label: '3 år' },
+      { value: '5y', label: '5 år' },
+    ];
+
+    const partsListEl = document.getElementById('partsList');
+    const addPartBtn = document.getElementById('addPart');
+    const partsWarningEl = document.getElementById('partsWarning');
+    const partsWarningTextEl = document.getElementById('partsWarningText');
+    const partsTotalEl = document.getElementById('partsTotal');
+    const avgRateEl = document.getElementById('avgRate');
+    const avgRateNoteEl = document.getElementById('avgRateNote');
+
+    const grossMonthlyEl = document.getElementById('grossMonthly');
+    const amortMonthlyEl = document.getElementById('amortMonthly');
+    const interestMonthlyEl = document.getElementById('interestMonthly');
+    const interestAfterEl = document.getElementById('interestAfter');
+    const driftMonthlyEl = document.getElementById('driftMonthly');
+
+    // Sammanställning (report)
+    const rGrossEl = document.getElementById('r-gross');
+    const rPriceEl = document.getElementById('r-price');
+    const rDownpaymentEl = document.getElementById('r-downpayment');
+    const rLoanEl = document.getElementById('r-loan');
+    const rLtvEl = document.getElementById('r-ltv');
+    const rAmortEl = document.getElementById('r-amort');
+    const rDriftEl = document.getElementById('r-drift');
+    const rPartsEl = document.getElementById('r-parts');
+    const rPartsSumEl = document.getElementById('r-partsSum');
+    const rAvgRateEl = document.getElementById('r-avgRate');
+    const rInterestEl = document.getElementById('r-interest');
+    const rAmortKrEl = document.getElementById('r-amortKr');
+    const rDriftKrEl = document.getElementById('r-driftKr');
+    const rGrossRowEl = document.getElementById('r-grossRow');
+    const rSavingEl = document.getElementById('r-saving');
+    const rRealCostEl = document.getElementById('r-realCost');
+    const rRealCostAfterEl = document.getElementById('r-realCostAfter');
+    const rCostNoteEl = document.getElementById('r-costNote');
+    const rBorrowersSectionEl = document.getElementById('r-borrowersSection');
+    const rBorrowersEl = document.getElementById('r-borrowers');
+
+    document.getElementById('reportDate').textContent =
+      'Upprättad ' + new Date().toLocaleDateString('sv-SE');
+    document.getElementById('exportPdf').addEventListener('click', () => window.print());
+
+    // Förhandsvisning av utveckling
+    const trendChartEl = document.getElementById('trendChart');
+    const trendStatsEl = document.getElementById('trendStats');
+
+    // Lagstadgat amorteringskrav
+    const amortReqChartEl = document.getElementById('amortReqChart');
+    const amortReqStatsEl = document.getElementById('amortReqStats');
+
+    // ---- Delad hover-tooltip för diagrammen ----
+    let trendData = [];
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'pointer-events-none fixed z-50 hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg';
+    document.body.appendChild(tooltipEl);
+
+    function tooltipHtml(d) {
+      const row = (label, val, strong) =>
+        '<div class="flex justify-between gap-6">' +
+          '<span class="text-slate-500">' + label + '</span>' +
+          '<span class="' + (strong ? 'font-medium text-ink' : 'text-ink') + '">' + formatKr(val) + '</span>' +
+        '</div>';
+      return '<p class="mb-1.5 font-medium text-ink">' + d.label + '</p>' +
+        row('Ränta', d.interest) +
+        row('Amortering', d.amort) +
+        row('Driftkostnad', d.drift) +
+        '<div class="my-1.5 h-px bg-slate-100"></div>' +
+        row('Totalt', d.total, true);
+    }
+
+    function showTooltip(clientX, clientY, d) {
+      tooltipEl.innerHTML = tooltipHtml(d);
+      tooltipEl.classList.remove('hidden');
+      const pad = 14;
+      const r = tooltipEl.getBoundingClientRect();
+      let left = clientX + pad;
+      let top = clientY + pad;
+      if (left + r.width > window.innerWidth - 8) left = clientX - r.width - pad;
+      if (top + r.height > window.innerHeight - 8) top = clientY - r.height - pad;
+      tooltipEl.style.left = Math.max(8, left) + 'px';
+      tooltipEl.style.top = Math.max(8, top) + 'px';
+    }
+
+    function hideTooltip() { tooltipEl.classList.add('hidden'); }
+
+    // Lättviktigt SVG-linjediagram med hover-overlay (inga externa bibliotek)
+    function renderLineChart(container, breakdown, marks) {
+      const series = breakdown.map(d => d.total);
+      const W = 720, H = 180;
+      const padL = 10, padR = 10, padT = 16, padB = 24;
+      const n = series.length;
+
+      if (n === 0) { container.innerHTML = ''; return; }
+
+      let yMin = Math.min(...series);
+      let yMax = Math.max(...series);
+      if (yMax - yMin < 1e-6) { yMax += 1; yMin -= 1; }
+
+      const x = (i) => padL + (W - padL - padR) * (n > 1 ? i / (n - 1) : 0.5);
+      const y = (v) => padT + (H - padT - padB) * (1 - (v - yMin) / (yMax - yMin));
+      const baseY = H - padB;
+
+      const pts = series.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1));
+      const line = pts.join(' ');
+      const area = 'M ' + x(0).toFixed(1) + ',' + baseY +
+        ' L ' + line.replace(/ /g, ' L ') +
+        ' L ' + x(n - 1).toFixed(1) + ',' + baseY + ' Z';
+
+      const markSvg = (marks || []).map(mk => {
+        const mx = x(mk.index).toFixed(1);
+        return '<line x1="' + mx + '" y1="' + padT + '" x2="' + mx + '" y2="' + baseY +
+          '" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" />' +
+          '<text x="' + mx + '" y="' + (padT - 5) + '" text-anchor="middle" ' +
+          'font-size="11" fill="#64748b">' + mk.label + '</text>';
+      }).join('');
+
+      // Glesa årsetiketter på x-axeln
+      const totalYears = Math.max(1, Math.round(n / 12));
+      const yearStep = totalYears > 30 ? 10 : totalYears > 12 ? 5 : totalYears > 6 ? 2 : 1;
+      let xLabels = '';
+      for (let yr = 0; yr <= totalYears; yr += yearStep) {
+        const idx = Math.min(yr * 12, n - 1);
+        xLabels += '<text x="' + x(idx).toFixed(1) + '" y="' + (H - 6) +
+          '" text-anchor="middle" font-size="10" fill="#94a3b8">' +
+          (yr === 0 ? 'Idag' : yr + ' år') + '</text>';
+      }
+
+      const svg =
+        '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-full" style="height:11rem" ' +
+        'preserveAspectRatio="none" role="img">' +
+        '<line x1="' + padL + '" y1="' + baseY + '" x2="' + (W - padR) + '" y2="' + baseY +
+        '" stroke="#e2e8f0" stroke-width="1" />' +
+        '<path d="' + area + '" fill="rgba(100,116,139,0.08)" />' +
+        '<polyline points="' + line + '" fill="none" stroke="#64748b" ' +
+        'stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />' +
+        markSvg + xLabels +
+        '</svg>';
+
+      // Genomskinlig hover-overlay: en kolumn per månad ger lodrät markering + tooltip
+      const overlay = '<div class="absolute inset-0 flex">' +
+        breakdown.map((d, i) =>
+          '<div class="chart-hit flex-1 hover:bg-slate-100/70" data-i="' + i + '"></div>'
+        ).join('') + '</div>';
+
+      container.style.position = 'relative';
+      container.innerHTML = svg + overlay;
+
+      container.onmousemove = (e) => {
+        const cell = e.target.closest('[data-i]');
+        if (!cell) { hideTooltip(); return; }
+        showTooltip(e.clientX, e.clientY, breakdown[+cell.dataset.i]);
+      };
+      container.onmouseleave = hideTooltip;
+    }
+
+    let partIdSeq = 0;
+
+    function buildPartRow(id) {
+      const wrap = document.createElement('div');
+      wrap.dataset.id = id;
+      wrap.className = 'rounded-xl border border-slate-200 bg-white p-4';
+      wrap.innerHTML = `
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-12 md:items-end">
+          <div class="md:col-span-3">
+            <label class="block text-xs font-medium text-slate-500">Belopp</label>
+            <div class="relative mt-1.5">
+              <input data-role="kr" type="text" inputmode="numeric" autocomplete="off"
+                class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-9 text-base font-normal text-ink transition placeholder:text-slate-300"
+                placeholder="0" />
+              <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">kr</span>
+            </div>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-slate-500">Andel</label>
+            <div class="relative mt-1.5">
+              <input data-role="pct" type="text" inputmode="decimal" autocomplete="off"
+                class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-8 text-base font-normal text-ink transition placeholder:text-slate-300"
+                placeholder="0" />
+              <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">%</span>
+            </div>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-medium text-slate-500">Ränta</label>
+            <div class="relative mt-1.5">
+              <input data-role="rate" type="text" inputmode="decimal" autocomplete="off"
+                class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-8 text-base font-normal text-ink transition placeholder:text-slate-300"
+                placeholder="0" />
+              <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">%</span>
+            </div>
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-xs font-medium text-slate-500">Bindningstid</label>
+            <select data-role="term"
+              class="field-input mt-1.5 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-base font-normal text-ink transition">
+              ${TERMS.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+            </select>
+          </div>
+          <div class="md:col-span-2 flex items-center gap-2 md:flex-col md:items-end md:justify-center md:gap-1.5">
+            <button data-action="fill" type="button"
+              class="whitespace-nowrap rounded-lg px-2 py-2 text-xs font-medium text-slate-500 transition hover:text-ink">
+              Fyll på resten
+            </button>
+            <button data-action="remove" type="button"
+              class="rounded-lg px-2 py-2 text-sm font-medium text-slate-400 transition hover:text-amber-700">
+              Ta bort
+            </button>
+          </div>
+        </div>`;
+      return wrap;
+    }
+
+    function addPart(rate, term) {
+      const id = ++partIdSeq;
+      const row = buildPartRow(id);
+      partsListEl.appendChild(row);
+      if (rate != null) row.querySelector('[data-role="rate"]').value = rate;
+      if (term != null) row.querySelector('[data-role="term"]').value = term;
+      render();
+    }
+
+    function removePart(id) {
+      const row = partsListEl.querySelector(`[data-id="${id}"]`);
+      if (row) row.remove();
+      render();
+    }
+
+    // Synkar kr -> % i en rad
+    function syncRowFromKr(row) {
+      const krEl = row.querySelector('[data-role="kr"]');
+      const pctEl = row.querySelector('[data-role="pct"]');
+      const kr = parseNumber(krEl.value);
+      if (currentLoan > 0) {
+        pctEl.value = kr > 0 ? nf1.format((kr / currentLoan) * 100) : '';
+      } else {
+        pctEl.value = '';
+      }
+    }
+
+    // Synkar % -> kr i en rad
+    function syncRowFromPct(row) {
+      const krEl = row.querySelector('[data-role="kr"]');
+      const pctEl = row.querySelector('[data-role="pct"]');
+      const pct = parseNumber(pctEl.value);
+      if (currentLoan > 0) {
+        krEl.value = pct > 0 ? nf0.format(Math.round((pct / 100) * currentLoan)) : '';
+      }
+    }
+
+    // ---- Låntagare ----
+    function getBorrowerCount() {
+      let n = parseInt(numBorrowersEl.value, 10);
+      if (!isFinite(n) || n < 1) n = 1;
+      if (n > 6) n = 6;
+      return n;
+    }
+
+    function buildBorrowerRow(index, sharePct) {
+      const row = document.createElement('div');
+      row.dataset.bid = index;
+      row.className = 'grid grid-cols-12 items-center gap-3';
+      row.innerHTML = `
+        <span class="col-span-4 text-sm font-light text-slate-500">Person ${index}</span>
+        <div class="relative col-span-4">
+          <input data-brole="kr" type="text" inputmode="numeric" autocomplete="off"
+            class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-9 text-base font-normal text-ink transition placeholder:text-slate-300"
+            placeholder="0" />
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">kr</span>
+        </div>
+        <div class="relative col-span-4">
+          <input data-brole="pct" type="text" inputmode="decimal" autocomplete="off"
+            class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-8 text-base font-normal text-ink transition placeholder:text-slate-300"
+            placeholder="0" />
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">%</span>
+        </div>`;
+      row.querySelector('[data-brole="pct"]').value = nf1.format(sharePct);
+      return row;
+    }
+
+    // Bygger om raderna med jämn fördelning (anropas när antalet ändras)
+    function renderBorrowers() {
+      const n = getBorrowerCount();
+      borrowersListEl.innerHTML = '';
+      if (n <= 1) return;
+      const equal = 100 / n;
+      for (let i = 0; i < n; i++) {
+        borrowersListEl.appendChild(buildBorrowerRow(i + 1, equal));
+      }
+    }
+
+    function syncBorrowerFromKr(row) {
+      const krEl = row.querySelector('[data-brole="kr"]');
+      const pctEl = row.querySelector('[data-brole="pct"]');
+      const kr = parseNumber(krEl.value);
+      pctEl.value = currentLoan > 0 && kr > 0 ? nf1.format((kr / currentLoan) * 100) : '';
+    }
+
+    function syncBorrowerFromPct(row) {
+      const krEl = row.querySelector('[data-brole="kr"]');
+      const pctEl = row.querySelector('[data-brole="pct"]');
+      const pct = parseNumber(pctEl.value);
+      if (currentLoan > 0) {
+        krEl.value = pct > 0 ? nf0.format(Math.round((pct / 100) * currentLoan)) : '';
+      }
+    }
+
+    // Normaliserade andelar (summerar till 1). Vid en person: [1].
+    function getBorrowerFractions() {
+      const n = getBorrowerCount();
+      if (n <= 1) return [1];
+      const raw = Array.from(borrowersListEl.children)
+        .map(r => parseNumber(r.querySelector('[data-brole="pct"]').value));
+      const sum = raw.reduce((a, b) => a + b, 0);
+      if (sum <= 0) return Array(n).fill(1 / n);
+      return raw.map(s => s / sum);
+    }
+
+    // Ränteavdrag per person: 30 % upp till 100 000 kr/år, 21 % över. Summeras.
+    function computeDeduction(annualInterest) {
+      const fractions = getBorrowerFractions();
+      let total = 0;
+      for (const f of fractions) {
+        const personInterest = annualInterest * f;
+        total += Math.min(personInterest, 100000) * 0.30
+          + Math.max(personInterest - 100000, 0) * 0.21;
+      }
+      return total;
+    }
+
+    // Fyller en lånedel med det som återstår av lånet (totalt lån minus övriga delar)
+    function fillPart(id) {
+      const others = Array.from(partsListEl.children)
+        .filter(r => r.dataset.id !== String(id))
+        .reduce((a, r) => a + parseNumber(r.querySelector('[data-role="kr"]').value), 0);
+      const remaining = Math.max(currentLoan - others, 0);
+      const row = partsListEl.querySelector(`[data-id="${id}"]`);
+      if (!row) return;
+      row.querySelector('[data-role="kr"]').value = nf0.format(Math.round(remaining));
+      syncRowFromKr(row);
+      render();
+    }
+
+    // Avrundar procentandelar till en decimal med "largest remainder" så att
+    // de summerar jämnt (undviker t.ex. 33,3 + 33,3 + 33,3 = 99,9 %).
+    function roundSharesTenths(raw) {
+      const tenths = raw.map(v => Math.round(v * 10));
+      let diff = Math.round(raw.reduce((a, b) => a + b, 0) * 10) - tenths.reduce((a, b) => a + b, 0);
+      if (diff !== 0) {
+        const order = raw
+          .map((v, i) => ({ i, frac: v * 10 - Math.floor(v * 10), v }))
+          .filter(o => o.v > 0);
+        if (diff > 0) {
+          order.sort((a, b) => b.frac - a.frac);
+          for (let k = 0; k < order.length && diff > 0; k++) { tenths[order[k].i]++; diff--; }
+        } else {
+          order.sort((a, b) => a.frac - b.frac);
+          for (let k = 0; k < order.length && diff < 0; k++) {
+            if (tenths[order[k].i] > 0) { tenths[order[k].i]--; diff++; }
+          }
+        }
+      }
+      return tenths.map(t => t / 10);
+    }
+
+    // Räknar om härledda värden för alla lånedelar: snittränta, andelar och validering
+    function updatePartsDerived() {
+      const rows = Array.from(partsListEl.children);
+
+      // Läs av alla rader först
+      const data = rows.map((row) => {
+        const kr = parseNumber(row.querySelector('[data-role="kr"]').value);
+        const rate = parseNumber(row.querySelector('[data-role="rate"]').value);
+        const termEl = row.querySelector('[data-role="term"]');
+        const termLabel = (TERMS.find(t => t.value === termEl.value) || {}).label || '';
+        return { row, kr, rate, termLabel };
+      });
+
+      const sumKr = data.reduce((a, d) => a + d.kr, 0);
+      const weightedRate = data.reduce((a, d) => a + d.kr * d.rate, 0);
+
+      // Andelar i % av totalt lånebelopp, jämnt avrundade så summan stämmer
+      const shares = roundSharesTenths(
+        data.map(d => currentLoan > 0 ? (d.kr / currentLoan) * 100 : 0)
+      );
+
+      const reportRows = [];
+      data.forEach((d, i) => {
+        const pctEl = d.row.querySelector('[data-role="pct"]');
+        const showShare = currentLoan > 0 && d.kr > 0;
+
+        // Uppdatera andelen om fältet inte redigeras just nu
+        if (document.activeElement !== pctEl) {
+          pctEl.value = showShare ? nf1.format(shares[i]) : '';
+        }
+
+        reportRows.push(
+          '<tr class="border-b border-slate-100">' +
+            '<td class="py-2.5 pr-4">' + formatKr(d.kr) + '</td>' +
+            '<td class="py-2.5 pr-4 text-slate-500">' + (showShare ? nf1.format(shares[i]) + ' %' : '&ndash;') + '</td>' +
+            '<td class="py-2.5 pr-4">' + nf2.format(d.rate) + ' %</td>' +
+            '<td class="py-2.5">' + (d.termLabel || '&ndash;') + '</td>' +
+          '</tr>'
+        );
+      });
+
+      // Fyll sammanställningens lånedelstabell
+      rPartsEl.innerHTML = reportRows.length
+        ? reportRows.join('')
+        : '<tr><td colspan="4" class="py-2.5 text-slate-400 font-light">Inga lånedelar tillagda.</td></tr>';
+
+      // Viktad snittränta
+      const avgRate = sumKr > 0 ? weightedRate / sumKr : 0;
+      avgRateEl.textContent = nf2.format(avgRate) + ' %';
+      rAvgRateEl.textContent = nf2.format(avgRate) + ' %';
+      rPartsSumEl.textContent = formatKr(sumKr);
+      avgRateNoteEl.textContent = rows.length
+        ? (rows.length === 1 ? '1 lånedel' : rows.length + ' lånedelar')
+        : 'Inga lånedelar tillagda';
+
+      // Summering
+      if (rows.length > 0) {
+        partsTotalEl.textContent = 'Summa lånedelar ' + formatKr(sumKr) +
+          (currentLoan > 0 ? ' av ' + formatKr(currentLoan) : '');
+      } else {
+        partsTotalEl.innerHTML = '&nbsp;';
+      }
+
+      // Validering mot totalt lånebelopp (1 kr tolerans för avrundning)
+      const diff = sumKr - currentLoan;
+      if (rows.length > 0 && currentLoan > 0 && Math.abs(diff) >= 1) {
+        partsWarningEl.classList.remove('hidden');
+        partsWarningEl.classList.add('flex');
+        if (diff > 0) {
+          partsWarningTextEl.textContent =
+            'Lånedelarna överstiger lånebeloppet med ' + formatKr(Math.abs(diff)) + '.';
+        } else {
+          partsWarningTextEl.textContent =
+            formatKr(Math.abs(diff)) + ' av lånebeloppet är ännu inte fördelat på lånedelar.';
+        }
+      } else {
+        partsWarningEl.classList.add('hidden');
+        partsWarningEl.classList.remove('flex');
+      }
+
+      // ---- Månadskostnad ----
+      const amortPct = parseNumber(amortEl.value);
+      const drift = parseNumber(operatingEl.value);
+
+      // weightedRate = summa(belopp * ränta) => ränta/mån = weightedRate / 100 / 12
+      const monthlyInterest = weightedRate / 100 / 12;
+      const monthlyAmort = (amortPct / 100) * currentLoan / 12;
+      const gross = monthlyInterest + monthlyAmort + drift;
+
+      grossMonthlyEl.textContent = formatKr(gross);
+      amortMonthlyEl.textContent = formatKr(monthlyAmort);
+      interestMonthlyEl.textContent = formatKr(monthlyInterest);
+      driftMonthlyEl.textContent = formatKr(drift);
+
+      // Uppdatera låntagarnas kronbelopp (härleds ur andel × lånebelopp)
+      Array.from(borrowersListEl.children).forEach((row) => {
+        const krEl = row.querySelector('[data-brole="kr"]');
+        const pctEl = row.querySelector('[data-brole="pct"]');
+        if (document.activeElement !== krEl) {
+          const pct = parseNumber(pctEl.value);
+          krEl.value = currentLoan > 0 && pct > 0
+            ? nf0.format(Math.round((pct / 100) * currentLoan)) : '';
+        }
+      });
+
+      // Diskret notis om fördelningen inte summerar till 100 %
+      const nBorrowers = getBorrowerCount();
+      if (nBorrowers >= 2) {
+        const rawSum = Array.from(borrowersListEl.children)
+          .reduce((a, r) => a + parseNumber(r.querySelector('[data-brole="pct"]').value), 0);
+        if (Math.abs(rawSum - 100) >= 0.1) {
+          borrowersNoteEl.classList.remove('hidden');
+          borrowersNoteEl.textContent =
+            'Fördelningen summerar till ' + nf1.format(rawSum) + ' % – beräkningen normaliserar till 100 %.';
+        } else {
+          borrowersNoteEl.classList.add('hidden');
+        }
+      } else {
+        borrowersNoteEl.classList.add('hidden');
+      }
+
+      // Ränteavdrag: 30 % upp till 100 000 kr/år, 21 % över – per person
+      const annualInterest = monthlyInterest * 12;
+      const deduction = computeDeduction(annualInterest);
+      const monthlyAfter = monthlyInterest - deduction / 12;
+
+      interestAfterEl.textContent = annualInterest > 0
+        ? '≈ ' + formatKr(monthlyAfter) + '/mån efter ränteavdrag'
+        : ' ';
+
+      // ---- Sammanställning: skalära fält ----
+      const price = parseNumber(priceEl.value);
+      const dpKr = parseNumber(dpKrEl.value);
+      const dpPct = price > 0 ? (dpKr / price) * 100 : 0;
+      const ltv = price > 0 ? (currentLoan / price) * 100 : 0;
+
+      // Nedbrytning: påtvingat sparande vs faktisk kostnad
+      const realCost = monthlyInterest + drift;
+      const realCostAfter = monthlyAfter + drift;
+
+      rInterestEl.textContent = formatKr(monthlyInterest);
+      rAmortKrEl.textContent = formatKr(monthlyAmort);
+      rDriftKrEl.textContent = formatKr(drift);
+      rGrossRowEl.textContent = formatKr(gross);
+      rSavingEl.textContent = formatKr(monthlyAmort);
+      rRealCostEl.textContent = formatKr(realCost);
+      rRealCostAfterEl.textContent = formatKr(realCostAfter);
+
+      rCostNoteEl.textContent = gross > 0
+        ? 'Av månadskostnaden ' + formatKr(gross) + ' är ' + formatKr(monthlyAmort) +
+          ' amortering – ett påtvingat sparande som minskar din skuld och bygger eget kapital. ' +
+          'Resten, ' + formatKr(realCost) + ', är din faktiska kostnad (ränta och drift). ' +
+          'Efter ränteavdrag landar den faktiska kostnaden på ' + formatKr(realCostAfter) + ' per månad.' +
+          (nBorrowers >= 2
+            ? ' Ränteavdraget är beräknat per person utifrån fördelningen nedan – taket på 100 000 kr/år gäller var och en.'
+            : ' Ränteavdraget är beräknat för en låntagare.')
+        : '';
+
+      // Sammanställning: låntagartabell
+      if (nBorrowers >= 2) {
+        const fractions = getBorrowerFractions();
+        rBorrowersSectionEl.classList.remove('hidden');
+        rBorrowersEl.innerHTML = fractions.map((f, i) => {
+          const personInterest = annualInterest * f;
+          const personDed = (Math.min(personInterest, 100000) * 0.30
+            + Math.max(personInterest - 100000, 0) * 0.21) / 12;
+          return '<tr class="border-b border-slate-100">' +
+            '<td class="py-2.5 pr-4">Person ' + (i + 1) + '</td>' +
+            '<td class="py-2.5 pr-4 text-slate-500">' + nf1.format(f * 100) + ' %</td>' +
+            '<td class="py-2.5 pr-4">' + formatKr(f * currentLoan) + '</td>' +
+            '<td class="py-2.5">' + formatKr(personDed) + '/mån</td>' +
+          '</tr>';
+        }).join('');
+      } else {
+        rBorrowersSectionEl.classList.add('hidden');
+        rBorrowersEl.innerHTML = '';
+      }
+
+      rGrossEl.textContent = formatKr(gross);
+      rPriceEl.textContent = formatKr(price);
+      rDownpaymentEl.textContent = formatKr(dpKr) +
+        (price > 0 ? ' (' + nf1.format(dpPct) + ' %)' : '');
+      rLoanEl.textContent = formatKr(currentLoan);
+      rLtvEl.textContent = nf1.format(ltv) + ' %';
+      rAmortEl.textContent = nf1.format(amortPct) + ' %';
+      rDriftEl.textContent = formatKr(drift) + '/mån';
+
+      // ---- Förhandsvisning: 36 månader med krympande skuld ----
+      trendData = [];
+      let debt = currentLoan;
+      for (let m = 0; m < 36; m++) {
+        const monthInterest = debt * (avgRate / 100) / 12;
+        const amortPaid = Math.min(monthlyAmort, debt);
+        trendData.push({
+          label: 'Månad ' + (m + 1),
+          interest: monthInterest,
+          amort: amortPaid,
+          drift: drift,
+          total: monthInterest + amortPaid + drift,
+        });
+        debt = Math.max(debt - amortPaid, 0);
+      }
+
+      const totals = trendData.map(d => d.total);
+      const maxG = Math.max(...totals);
+      const minG = Math.min(...totals);
+      const span = maxG - minG;
+
+      trendChartEl.innerHTML = trendData.map((d, i) => {
+        // Skala höjden så nedtrappningen syns även när skillnaden är liten
+        const h = span > 0 ? 30 + 70 * ((d.total - minG) / span) : 100;
+        const isYearMark = (i + 1) % 12 === 0;
+        const color = isYearMark ? '#64748b' : '#cbd5e1';
+        return '<div class="trend-bar flex-1 rounded-t-sm" ' +
+          'style="height:' + h.toFixed(1) + '%;background-color:' + color + '" ' +
+          'data-i="' + i + '"></div>';
+      }).join('');
+
+      trendChartEl.onmousemove = (e) => {
+        const bar = e.target.closest('[data-i]');
+        if (!bar) { hideTooltip(); return; }
+        showTooltip(e.clientX, e.clientY, trendData[+bar.dataset.i]);
+      };
+      trendChartEl.onmouseleave = hideTooltip;
+
+      const stat = (label, value) =>
+        '<div><p class="text-xs font-light text-slate-400">' + label + '</p>' +
+        '<p class="mt-1 text-base font-normal text-ink">' + formatKr(value) + '</p></div>';
+
+      trendStatsEl.innerHTML =
+        stat('Månad 1', trendData[0].total) +
+        stat('Månad 12', trendData[11].total) +
+        stat('Månad 24', trendData[23].total) +
+        stat('Månad 36', trendData[35].total);
+
+      // ---- Lagstadgat amorteringskrav ----
+      // 2 % per år > 70 %, 1 % per år 50–70 %, 0 % under 50 %.
+      // Amorteringen beräknas på ursprungligt lånebelopp enligt regelverket.
+      const reqSeries = [];
+      const reqMarks = [];
+      let reqDebt = currentLoan;
+      let cross70 = null, cross50 = null;
+      const MAX_MONTHS = 480; // 40 år som tak
+
+      if (currentLoan > 0 && price > 0) {
+        for (let m = 0; m < MAX_MONTHS; m++) {
+          const ltvNow = (reqDebt / price) * 100;
+
+          if (cross70 === null && ltvNow <= 70) cross70 = m;
+          if (cross50 === null && ltvNow <= 50) cross50 = m;
+
+          let annualPct = 0;
+          if (ltvNow > 70) annualPct = 2;
+          else if (ltvNow > 50) annualPct = 1;
+
+          const monthAmort = Math.min((annualPct / 100) * currentLoan / 12, reqDebt);
+          const monthInterest = reqDebt * (avgRate / 100) / 12;
+          reqSeries.push({
+            label: 'Månad ' + (m + 1) + ' · ' + nf1.format((m + 1) / 12) + ' år',
+            interest: monthInterest,
+            amort: monthAmort,
+            drift: drift,
+            total: monthInterest + monthAmort + drift,
+          });
+          reqDebt = Math.max(reqDebt - monthAmort, 0);
+
+          // Avsluta en bit efter att kravet upphört (under 50 %)
+          if (cross50 !== null && m >= cross50 + 23) break;
+        }
+
+        // Markörer endast om gränserna faktiskt passeras inom serien
+        if (cross70 !== null && cross70 > 0 && cross70 < reqSeries.length) {
+          reqMarks.push({ index: cross70, label: '70 %' });
+        }
+        if (cross50 !== null && cross50 > 0 && cross50 < reqSeries.length) {
+          reqMarks.push({ index: cross50, label: '50 %' });
+        }
+      }
+
+      renderLineChart(amortReqChartEl, reqSeries, reqMarks);
+
+      const yearOf = (idx) => Math.max(1, Math.round((idx + 1) / 12));
+      const reqStat = (label, value, sub) =>
+        '<div><p class="text-xs font-light text-slate-400">' + label + '</p>' +
+        '<p class="mt-1 text-base font-normal text-ink">' + value + '</p>' +
+        (sub ? '<p class="text-xs font-light text-slate-400">' + sub + '</p>' : '') + '</div>';
+
+      if (reqSeries.length > 0) {
+        const startCell = reqStat('Idag', formatKr(reqSeries[0].total),
+          nf1.format(ltv) + ' % belåningsgrad');
+
+        let cell70;
+        if (cross70 !== null && cross70 > 0 && cross70 < reqSeries.length) {
+          cell70 = reqStat('Vid 70 %', formatKr(reqSeries[cross70].total), 'efter ca ' + yearOf(cross70) + ' år');
+        } else {
+          cell70 = reqStat('Vid 70 %', '&ndash;', 'redan under 70 %');
+        }
+
+        let cell50;
+        if (cross50 !== null && cross50 > 0 && cross50 < reqSeries.length) {
+          cell50 = reqStat('Vid 50 % (krav upphör)', formatKr(reqSeries[cross50].total), 'efter ca ' + yearOf(cross50) + ' år');
+        } else if (cross50 === 0) {
+          cell50 = reqStat('Vid 50 %', '&ndash;', 'redan under 50 %');
+        } else {
+          cell50 = reqStat('Vid 50 %', '&ndash;', 'ej inom 40 år');
+        }
+
+        amortReqStatsEl.innerHTML = startCell + cell70 + cell50;
+      } else {
+        amortReqStatsEl.innerHTML =
+          '<p class="col-span-full text-sm font-light text-slate-400">Fyll i köpeskilling och lånedelar för att se utvecklingen.</p>';
+      }
+    }
+
+    // Händelsedelegering för lånedelar
+    partsListEl.addEventListener('input', (e) => {
+      const row = e.target.closest('[data-id]');
+      if (!row) return;
+      const role = e.target.dataset.role;
+      if (role === 'kr') {
+        syncRowFromKr(row);
+      } else if (role === 'pct') {
+        syncRowFromPct(row);
+      }
+      render();
+    });
+
+    partsListEl.addEventListener('change', (e) => {
+      if (e.target.dataset.role === 'term') render();
+    });
+
+    partsListEl.addEventListener('blur', (e) => {
+      if (e.target.dataset.role === 'kr') {
+        formatIntegerField(e.target);
+        render();
+      }
+    }, true);
+
+    partsListEl.addEventListener('click', (e) => {
+      const fillBtn = e.target.closest('[data-action="fill"]');
+      if (fillBtn) {
+        const row = fillBtn.closest('[data-id]');
+        if (row) fillPart(row.dataset.id);
+        return;
+      }
+      const btn = e.target.closest('[data-action="remove"]');
+      if (!btn) return;
+      const row = btn.closest('[data-id]');
+      if (row) removePart(row.dataset.id);
+    });
+
+    addPartBtn.addEventListener('click', () => addPart());
+
+    // Initialt – förifyllda exempelvärden så kalkylen är levande direkt
+    priceEl.value = nf0.format(3500000);
+    dpKrEl.value = nf0.format(525000);
+    amortEl.value = '2';
+    operatingEl.value = nf0.format(4000);
+    numBorrowersEl.value = '2';
+    renderBorrowers();
+
+    addPart('3,5', 'rorlig');
+    const firstRow = partsListEl.querySelector('[data-id]');
+    firstRow.querySelector('[data-role="kr"]').value = nf0.format(2975000);
+
+    syncFromKr();   // fyll kontantinsats i procent
+    render();
+  </script>
+</body>
+</html>
