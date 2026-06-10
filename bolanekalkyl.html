@@ -117,30 +117,29 @@
           </div>
 
           <!-- Bostad & finansiering -->
-          <div class="mt-7 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3">
-            <div>
-              <p class="text-xs font-light text-slate-400">Köpeskilling</p>
-              <p id="r-price" class="mt-1 text-base font-normal text-ink">0 kr</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Kontantinsats</p>
-              <p id="r-downpayment" class="mt-1 text-base font-normal text-ink">0 kr</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Lånebelopp</p>
-              <p id="r-loan" class="mt-1 text-base font-normal text-ink">0 kr</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Belåningsgrad</p>
-              <p id="r-ltv" class="mt-1 text-base font-normal text-ink">0,0 %</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Amorteringstakt</p>
-              <p id="r-amort" class="mt-1 text-base font-normal text-ink">0 %</p>
-            </div>
-            <div>
-              <p class="text-xs font-light text-slate-400">Driftkostnad</p>
-              <p id="r-drift" class="mt-1 text-base font-normal text-ink">0 kr/mån</p>
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Bostad &amp; finansiering</h3>
+            <div class="mt-3 grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-3">
+              <div>
+                <p class="text-xs font-light text-slate-400">Köpeskilling</p>
+                <p id="r-price" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Kontantinsats</p>
+                <p id="r-downpayment" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Lånebelopp</p>
+                <p id="r-loan" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Belåningsgrad</p>
+                <p id="r-ltv" class="mt-1 text-base font-normal text-ink">0,0 %</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Amorteringstakt</p>
+                <p id="r-amort" class="mt-1 text-base font-normal text-ink">0 %</p>
+              </div>
             </div>
           </div>
 
@@ -185,8 +184,16 @@
                   <td class="py-2.5 text-right" id="r-driftKr">0 kr</td>
                 </tr>
                 <tr class="border-t border-slate-200">
-                  <td class="py-2.5 pr-4 font-medium text-ink">Total månadskostnad</td>
+                  <td class="py-2.5 pr-4 font-medium text-ink">Månadskostnad (brutto)</td>
                   <td class="py-2.5 text-right font-medium text-ink" id="r-grossRow">0 kr</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                  <td class="py-2.5 pr-4 text-slate-500">Ränteavdrag <span class="text-slate-400">(skattereduktion)</span></td>
+                  <td class="py-2.5 text-right text-slate-500" id="r-deduction">0 kr</td>
+                </tr>
+                <tr class="border-t border-slate-200">
+                  <td class="py-2.5 pr-4 font-medium text-ink">Månadskostnad (netto)</td>
+                  <td class="py-2.5 text-right font-medium text-ink" id="r-netRow">0 kr</td>
                 </tr>
               </tbody>
             </table>
@@ -758,7 +765,6 @@
     const rLoanEl = document.getElementById('r-loan');
     const rLtvEl = document.getElementById('r-ltv');
     const rAmortEl = document.getElementById('r-amort');
-    const rDriftEl = document.getElementById('r-drift');
     const rPartsEl = document.getElementById('r-parts');
     const rPartsSumEl = document.getElementById('r-partsSum');
     const rAvgRateEl = document.getElementById('r-avgRate');
@@ -766,6 +772,8 @@
     const rAmortKrEl = document.getElementById('r-amortKr');
     const rDriftKrEl = document.getElementById('r-driftKr');
     const rGrossRowEl = document.getElementById('r-grossRow');
+    const rDeductionEl = document.getElementById('r-deduction');
+    const rNetRowEl = document.getElementById('r-netRow');
     const rSavingEl = document.getElementById('r-saving');
     const rRealCostEl = document.getElementById('r-realCost');
     const rRealCostAfterEl = document.getElementById('r-realCostAfter');
@@ -1271,6 +1279,8 @@
       rAmortKrEl.textContent = formatKr(monthlyAmort);
       rDriftKrEl.textContent = formatKr(drift);
       rGrossRowEl.textContent = formatKr(gross);
+      rDeductionEl.textContent = (deduction > 0 ? '− ' : '') + formatKr(deduction / 12);
+      rNetRowEl.textContent = formatKr(gross - deduction / 12);
       rSavingEl.textContent = formatKr(monthlyAmort);
       rRealCostEl.textContent = formatKr(realCost);
       rRealCostAfterEl.textContent = formatKr(realCostAfter);
@@ -1316,7 +1326,6 @@
       rLoanEl.textContent = formatKr(currentLoan);
       rLtvEl.textContent = nf1.format(ltv) + ' %';
       rAmortEl.textContent = nf1.format(amortPct) + ' %';
-      rDriftEl.textContent = formatKr(drift) + '/mån';
 
       // ---- Engångskostnader: lagfart, pantbrev, total ----
       const lagfartAuto = price > 0 ? price * LAGFART_RATE + LAGFART_FEE : 0;
