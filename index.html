@@ -17,6 +17,11 @@
           },
           colors: {
             ink: '#1f2933',
+            brand: {
+              DEFAULT: '#2b6777',
+              dark: '#1f4e5a',
+              light: '#e3eef0',
+            },
           },
         },
       },
@@ -24,12 +29,32 @@
   </script>
   <style>
     html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-    body { background-color: #fbfcfd; }
+    body {
+      background-color: #fbfcfd;
+      background-image: linear-gradient(180deg, #fbfcfd 0%, #f4f7f9 60%);
+    }
     /* Dölj spinnerpilar på nummerfält */
     input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
-    .field-input:focus { outline: none; border-color: #94a3b8; box-shadow: 0 0 0 4px rgba(148,163,184,0.12); }
+    .field-input { transition: border-color .15s ease, box-shadow .15s ease; }
+    .field-input:hover { border-color: #cbd5e1; }
+    .field-input:focus { outline: none; border-color: #2b6777; box-shadow: 0 0 0 4px rgba(43,103,119,0.12); }
+
+    /* Mjuk upphöjning på de vita korten – lugn känsla av djup utan tunga ramar */
+    .surface {
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 18px 36px -22px rgba(15,23,42,0.18);
+    }
+
+    /* Segmentkontroller + knappar: tydlig men diskret tangentbordsfokus */
+    .seg { transition: color .15s ease, background-color .15s ease, box-shadow .15s ease; }
+    .seg:hover { color: #1f2933; }
+    .seg:focus-visible,
+    .exp-btn:focus-visible,
+    .ghost-btn:focus-visible {
+      outline: 2px solid rgba(43,103,119,0.45);
+      outline-offset: 2px;
+    }
 
     /* Diagram – hover */
     .trend-bar { transition: filter .15s ease; cursor: pointer; }
@@ -87,7 +112,7 @@
 
       <!-- Rubrik -->
       <header class="no-print mb-14">
-        <p class="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Kalkyl</p>
+        <p class="text-xs font-medium uppercase tracking-[0.2em] text-brand">Kalkyl</p>
         <h1 class="mt-3 text-3xl md:text-4xl font-light tracking-tight text-ink">Bolånekalkyl</h1>
         <p class="mt-3 text-base font-light leading-relaxed text-slate-500 max-w-xl">
           Fyll i uppgifterna så räknar vi fram lånebelopp, belåningsgrad och månadskostnad direkt.
@@ -96,7 +121,7 @@
 
       <!-- Sammanställning (visas snyggt överst, även vid PDF-export) -->
       <section id="report" class="mb-14">
-        <div class="report-card rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10">
+        <div class="report-card surface rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10">
 
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -108,7 +133,10 @@
               </p>
             </div>
             <button id="exportPdf" type="button"
-              class="no-print inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
+              class="exp-btn no-print inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-dark hover:shadow">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="7" rx="1" />
+              </svg>
               Exportera PDF
             </button>
           </div>
@@ -462,7 +490,7 @@
 
         <!-- Resultat -->
         <aside class="lg:col-span-2">
-          <div class="lg:sticky lg:top-16 rounded-2xl border border-slate-200/80 bg-white p-7">
+          <div class="surface lg:sticky lg:top-16 rounded-2xl border border-slate-200/80 bg-white p-7">
 
             <!-- Huvudfokus: månadskostnad -->
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Månadskostnad</p>
@@ -549,7 +577,7 @@
         </div>
 
         <button id="addPart" type="button"
-          class="mt-5 inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-ink">
+          class="ghost-btn mt-5 inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-brand hover:text-brand">
           <span class="text-base leading-none">+</span> Lägg till lånedel
         </button>
       </section>
@@ -561,7 +589,7 @@
           När skulden amorteras ned sjunker räntan, så månadskostnaden trappar ned något över tid.
         </p>
 
-        <div class="mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
+        <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
           <div id="trendStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4"></div>
 
           <div class="mt-7">
@@ -583,7 +611,7 @@
           Månadskostnaden trappas ned i steg när gränserna passeras.
         </p>
 
-        <div class="mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
+        <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
           <div id="amortReqStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3"></div>
           <div id="amortReqChart" class="mt-7"></div>
         </div>
@@ -680,7 +708,7 @@
           barColor = '#64748b';
         } else {
           note = 'Belåningsgrad inom normalt intervall.';
-          barColor = '#64748b';
+          barColor = '#2b6777'; // lugn accent – positiv signal
         }
       }
       ltvNoteEl.textContent = note;
@@ -926,8 +954,8 @@
         'preserveAspectRatio="none" role="img">' +
         '<line x1="' + padL + '" y1="' + baseY + '" x2="' + (W - padR) + '" y2="' + baseY +
         '" stroke="#e2e8f0" stroke-width="1" />' +
-        '<path d="' + area + '" fill="rgba(100,116,139,0.08)" />' +
-        '<polyline points="' + line + '" fill="none" stroke="#64748b" ' +
+        '<path d="' + area + '" fill="rgba(43,103,119,0.10)" />' +
+        '<polyline points="' + line + '" fill="none" stroke="#2b6777" ' +
         'stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />' +
         markSvg + xLabels +
         '</svg>';
@@ -954,7 +982,7 @@
     function buildPartRow(id) {
       const wrap = document.createElement('div');
       wrap.dataset.id = id;
-      wrap.className = 'rounded-xl border border-slate-200 bg-white p-4';
+      wrap.className = 'rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300';
       wrap.innerHTML = `
         <div class="grid grid-cols-2 gap-3 md:grid-cols-12 md:items-end">
           <div class="md:col-span-3">
@@ -993,7 +1021,7 @@
           </div>
           <div class="md:col-span-2 flex items-center gap-2 md:flex-col md:items-end md:justify-center md:gap-1.5">
             <button data-action="fill" type="button"
-              class="whitespace-nowrap rounded-lg px-2 py-2 text-xs font-medium text-slate-500 transition hover:text-ink">
+              class="ghost-btn whitespace-nowrap rounded-lg px-2 py-2 text-xs font-medium text-slate-500 transition hover:text-brand">
               Fyll på resten
             </button>
             <button data-action="remove" type="button"
@@ -1097,7 +1125,7 @@
       lagfartSegEl.querySelectorAll('[data-lagfart-mode]').forEach((btn) => {
         const active = btn.dataset.lagfartMode === lagfartMode;
         btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('text-ink', active);
+        btn.classList.toggle('text-brand', active);
         btn.classList.toggle('shadow-sm', active);
         btn.classList.toggle('text-slate-500', !active);
       });
@@ -1106,7 +1134,7 @@
       pantbrevSegEl.querySelectorAll('[data-pantbrev-mode]').forEach((btn) => {
         const active = btn.dataset.pantbrevMode === pantbrevMode;
         btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('text-ink', active);
+        btn.classList.toggle('text-brand', active);
         btn.classList.toggle('shadow-sm', active);
         btn.classList.toggle('text-slate-500', !active);
       });
@@ -1116,7 +1144,7 @@
       borrowersSegEl.querySelectorAll('[data-borrowers]').forEach((btn) => {
         const active = parseInt(btn.dataset.borrowers, 10) === getBorrowerCount();
         btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('text-ink', active);
+        btn.classList.toggle('text-brand', active);
         btn.classList.toggle('shadow-sm', active);
         btn.classList.toggle('text-slate-500', !active);
       });
@@ -1386,7 +1414,7 @@
         // Skala höjden så nedtrappningen syns även när skillnaden är liten
         const h = span > 0 ? 30 + 70 * ((d.total - minG) / span) : 100;
         const isYearMark = (i + 1) % 12 === 0;
-        const color = isYearMark ? '#64748b' : '#cbd5e1';
+        const color = isYearMark ? '#2b6777' : '#cbd5e1';
         return '<div class="trend-bar flex-1 rounded-t-sm" ' +
           'style="height:' + h.toFixed(1) + '%;background-color:' + color + '" ' +
           'data-i="' + i + '"></div>';
