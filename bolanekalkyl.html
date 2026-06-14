@@ -140,6 +140,10 @@
                 <p class="text-xs font-light text-slate-400">Amorteringstakt</p>
                 <p id="r-amort" class="mt-1 text-base font-normal text-ink">0 %</p>
               </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Låntagare</p>
+                <p id="r-borrowerCount" class="mt-1 text-base font-normal text-ink">1 person</p>
+              </div>
             </div>
           </div>
 
@@ -214,22 +218,6 @@
             </div>
 
             <p class="mt-3 text-xs font-light leading-relaxed text-slate-500" id="r-costNote"></p>
-          </div>
-
-          <!-- Låntagare -->
-          <div id="r-borrowersSection" class="mt-9 hidden">
-            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Låntagare</h3>
-            <table class="mt-3 w-full border-collapse text-sm">
-              <thead>
-                <tr class="border-b border-slate-200 text-left">
-                  <th class="py-2 pr-4 font-medium text-slate-500">Person</th>
-                  <th class="py-2 pr-4 font-medium text-slate-500">Andel</th>
-                  <th class="py-2 pr-4 font-medium text-slate-500">Andel av lån</th>
-                  <th class="py-2 font-medium text-slate-500">Ränteavdrag</th>
-                </tr>
-              </thead>
-              <tbody id="r-borrowers" class="font-light text-ink"></tbody>
-            </table>
           </div>
 
           <!-- Engångskostnader vid köp -->
@@ -336,16 +324,13 @@
 
             <!-- Låntagare -->
             <div>
-              <label for="numBorrowers" class="block text-sm font-medium text-slate-600">Låntagare</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Ränteavdraget (30 % upp till 100 000 kr/år) gäller per person</p>
-              <div class="relative mt-3">
-                <input id="numBorrowers" type="number" min="1" max="6" step="1"
-                  class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-24 text-lg font-normal text-ink transition placeholder:text-slate-300" />
-                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">personer</span>
-              </div>
+              <label class="block text-sm font-medium text-slate-600">Antal låntagare</label>
+              <p class="mt-1 text-xs font-light text-slate-400">Påverkar bara ränteavdraget &ndash; 30 % upp till 100 000 kr/år och tak per person. Vid två låntagare delas lånet 50/50.</p>
 
-              <div id="borrowersList" class="mt-4 space-y-3"></div>
-              <p id="borrowersNote" class="mt-2 hidden text-xs font-light text-amber-700">&nbsp;</p>
+              <div id="borrowersSeg" class="mt-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" data-borrowers="1" class="seg rounded-lg px-4 py-1.5 font-medium transition">1 person</button>
+                <button type="button" data-borrowers="2" class="seg rounded-lg px-4 py-1.5 font-medium transition">2 personer</button>
+              </div>
             </div>
 
             <!-- Lagfart -->
@@ -572,9 +557,8 @@
     const dpPctEl = document.getElementById('downPaymentPct');
     const amortEl = document.getElementById('amortPct');
     const operatingEl = document.getElementById('operatingCost');
-    const numBorrowersEl = document.getElementById('numBorrowers');
-    const borrowersListEl = document.getElementById('borrowersList');
-    const borrowersNoteEl = document.getElementById('borrowersNote');
+    const borrowersSegEl = document.getElementById('borrowersSeg');
+    let borrowerCount = 1;
 
     // Lagfart & pantbrev (engångskostnader)
     const LAGFART_RATE = 0.015, LAGFART_FEE = 825;
@@ -690,23 +674,14 @@
     operatingEl.addEventListener('input', render);
     operatingEl.addEventListener('blur', () => { formatIntegerField(operatingEl); render(); });
 
-    // Låntagare: antal + fördelning
-    numBorrowersEl.addEventListener('input', () => { renderBorrowers(); render(); });
-    numBorrowersEl.addEventListener('change', () => {
-      numBorrowersEl.value = getBorrowerCount();
-      renderBorrowers();
+    // Låntagare: 1 eller 2 (påverkar enbart ränteavdraget)
+    borrowersSegEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-borrowers]');
+      if (!btn) return;
+      borrowerCount = parseInt(btn.dataset.borrowers, 10) === 2 ? 2 : 1;
+      updateSegUI();
       render();
     });
-    borrowersListEl.addEventListener('input', (e) => {
-      const row = e.target.closest('[data-bid]');
-      if (!row) return;
-      if (e.target.dataset.brole === 'kr') syncBorrowerFromKr(row);
-      else if (e.target.dataset.brole === 'pct') syncBorrowerFromPct(row);
-      render();
-    });
-    borrowersListEl.addEventListener('blur', (e) => {
-      if (e.target.dataset.brole === 'kr') { formatIntegerField(e.target); render(); }
-    }, true);
 
     // Lagfart & pantbrev
     lagfartSegEl.addEventListener('click', (e) => {
@@ -778,8 +753,7 @@
     const rRealCostEl = document.getElementById('r-realCost');
     const rRealCostAfterEl = document.getElementById('r-realCostAfter');
     const rCostNoteEl = document.getElementById('r-costNote');
-    const rBorrowersSectionEl = document.getElementById('r-borrowersSection');
-    const rBorrowersEl = document.getElementById('r-borrowers');
+    const rBorrowerCountEl = document.getElementById('r-borrowerCount');
     const rCashDownEl = document.getElementById('r-cashDown');
     const rLagfartEl = document.getElementById('r-lagfart');
     const rLagfartNoteEl = document.getElementById('r-lagfartNote');
@@ -998,84 +972,19 @@
       }
     }
 
-    // ---- Låntagare ----
+    // ---- Låntagare (1 eller 2, lånet delas alltid 50/50) ----
     function getBorrowerCount() {
-      let n = parseInt(numBorrowersEl.value, 10);
-      if (!isFinite(n) || n < 1) n = 1;
-      if (n > 6) n = 6;
-      return n;
+      return borrowerCount === 2 ? 2 : 1;
     }
 
-    function buildBorrowerRow(index, sharePct) {
-      const row = document.createElement('div');
-      row.dataset.bid = index;
-      row.className = 'grid grid-cols-12 items-center gap-3';
-      row.innerHTML = `
-        <span class="col-span-4 text-sm font-light text-slate-500">Person ${index}</span>
-        <div class="relative col-span-4">
-          <input data-brole="kr" type="text" inputmode="numeric" autocomplete="off"
-            class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-9 text-base font-normal text-ink transition placeholder:text-slate-300"
-            placeholder="0" />
-          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">kr</span>
-        </div>
-        <div class="relative col-span-4">
-          <input data-brole="pct" type="text" inputmode="decimal" autocomplete="off"
-            class="field-input w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 pr-8 text-base font-normal text-ink transition placeholder:text-slate-300"
-            placeholder="0" />
-          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">%</span>
-        </div>`;
-      row.querySelector('[data-brole="pct"]').value = nf1.format(sharePct);
-      return row;
-    }
-
-    // Bygger om raderna med jämn fördelning (anropas när antalet ändras)
-    function renderBorrowers() {
-      const n = getBorrowerCount();
-      borrowersListEl.innerHTML = '';
-      if (n <= 1) return;
-      const equal = 100 / n;
-      for (let i = 0; i < n; i++) {
-        borrowersListEl.appendChild(buildBorrowerRow(i + 1, equal));
-      }
-    }
-
-    function syncBorrowerFromKr(row) {
-      const krEl = row.querySelector('[data-brole="kr"]');
-      const pctEl = row.querySelector('[data-brole="pct"]');
-      const kr = parseNumber(krEl.value);
-      pctEl.value = currentLoan > 0 && kr > 0 ? nf1.format((kr / currentLoan) * 100) : '';
-    }
-
-    function syncBorrowerFromPct(row) {
-      const krEl = row.querySelector('[data-brole="kr"]');
-      const pctEl = row.querySelector('[data-brole="pct"]');
-      const pct = parseNumber(pctEl.value);
-      if (currentLoan > 0) {
-        krEl.value = pct > 0 ? nf0.format(Math.round((pct / 100) * currentLoan)) : '';
-      }
-    }
-
-    // Normaliserade andelar (summerar till 1). Vid en person: [1].
-    function getBorrowerFractions() {
-      const n = getBorrowerCount();
-      if (n <= 1) return [1];
-      const raw = Array.from(borrowersListEl.children)
-        .map(r => parseNumber(r.querySelector('[data-brole="pct"]').value));
-      const sum = raw.reduce((a, b) => a + b, 0);
-      if (sum <= 0) return Array(n).fill(1 / n);
-      return raw.map(s => s / sum);
-    }
-
-    // Ränteavdrag per person: 30 % upp till 100 000 kr/år, 21 % över. Summeras.
+    // Ränteavdrag: 30 % upp till 100 000 kr/år, 21 % över – per person.
+    // Vid två låntagare delas räntan 50/50 och taket gäller var och en.
     function computeDeduction(annualInterest) {
-      const fractions = getBorrowerFractions();
-      let total = 0;
-      for (const f of fractions) {
-        const personInterest = annualInterest * f;
-        total += Math.min(personInterest, 100000) * 0.30
-          + Math.max(personInterest - 100000, 0) * 0.21;
-      }
-      return total;
+      const n = getBorrowerCount();
+      const personInterest = annualInterest / n;
+      const perPerson = Math.min(personInterest, 100000) * 0.30
+        + Math.max(personInterest - 100000, 0) * 0.21;
+      return perPerson * n;
     }
 
     // Fyller en lånedel med det som återstår av lånet (totalt lån minus övriga delar)
@@ -1133,6 +1042,14 @@
       });
       pantbrevAutoWrapEl.classList.toggle('hidden', pantbrevMode !== 'auto');
       pantbrevManualWrapEl.classList.toggle('hidden', pantbrevMode !== 'manual');
+
+      borrowersSegEl.querySelectorAll('[data-borrowers]').forEach((btn) => {
+        const active = parseInt(btn.dataset.borrowers, 10) === getBorrowerCount();
+        btn.classList.toggle('bg-white', active);
+        btn.classList.toggle('text-ink', active);
+        btn.classList.toggle('shadow-sm', active);
+        btn.classList.toggle('text-slate-500', !active);
+      });
     }
 
     // Räknar om härledda värden för alla lånedelar: snittränta, andelar och validering
@@ -1229,32 +1146,7 @@
       interestMonthlyEl.textContent = formatKr(monthlyInterest);
       driftMonthlyEl.textContent = formatKr(drift);
 
-      // Uppdatera låntagarnas kronbelopp (härleds ur andel × lånebelopp)
-      Array.from(borrowersListEl.children).forEach((row) => {
-        const krEl = row.querySelector('[data-brole="kr"]');
-        const pctEl = row.querySelector('[data-brole="pct"]');
-        if (document.activeElement !== krEl) {
-          const pct = parseNumber(pctEl.value);
-          krEl.value = currentLoan > 0 && pct > 0
-            ? nf0.format(Math.round((pct / 100) * currentLoan)) : '';
-        }
-      });
-
-      // Diskret notis om fördelningen inte summerar till 100 %
       const nBorrowers = getBorrowerCount();
-      if (nBorrowers >= 2) {
-        const rawSum = Array.from(borrowersListEl.children)
-          .reduce((a, r) => a + parseNumber(r.querySelector('[data-brole="pct"]').value), 0);
-        if (Math.abs(rawSum - 100) >= 0.1) {
-          borrowersNoteEl.classList.remove('hidden');
-          borrowersNoteEl.textContent =
-            'Fördelningen summerar till ' + nf1.format(rawSum) + ' % – beräkningen normaliserar till 100 %.';
-        } else {
-          borrowersNoteEl.classList.add('hidden');
-        }
-      } else {
-        borrowersNoteEl.classList.add('hidden');
-      }
 
       // Ränteavdrag: 30 % upp till 100 000 kr/år, 21 % över – per person
       const annualInterest = monthlyInterest * 12;
@@ -1291,29 +1183,11 @@
           'Resten, ' + formatKr(realCost) + ', är din faktiska kostnad (ränta och drift). ' +
           'Efter ränteavdrag landar den faktiska kostnaden på ' + formatKr(realCostAfter) + ' per månad.' +
           (nBorrowers >= 2
-            ? ' Ränteavdraget är beräknat per person utifrån fördelningen nedan – taket på 100 000 kr/år gäller var och en.'
+            ? ' Ränteavdraget är beräknat på två låntagare med hälften var – taket på 100 000 kr/år gäller var och en.'
             : ' Ränteavdraget är beräknat för en låntagare.')
         : '';
 
-      // Sammanställning: låntagartabell
-      if (nBorrowers >= 2) {
-        const fractions = getBorrowerFractions();
-        rBorrowersSectionEl.classList.remove('hidden');
-        rBorrowersEl.innerHTML = fractions.map((f, i) => {
-          const personInterest = annualInterest * f;
-          const personDed = (Math.min(personInterest, 100000) * 0.30
-            + Math.max(personInterest - 100000, 0) * 0.21) / 12;
-          return '<tr class="border-b border-slate-100">' +
-            '<td class="py-2.5 pr-4">Person ' + (i + 1) + '</td>' +
-            '<td class="py-2.5 pr-4 text-slate-500">' + nf1.format(f * 100) + ' %</td>' +
-            '<td class="py-2.5 pr-4">' + formatKr(f * currentLoan) + '</td>' +
-            '<td class="py-2.5">' + formatKr(personDed) + '/mån</td>' +
-          '</tr>';
-        }).join('');
-      } else {
-        rBorrowersSectionEl.classList.add('hidden');
-        rBorrowersEl.innerHTML = '';
-      }
+      rBorrowerCountEl.textContent = nBorrowers === 2 ? '2 personer' : '1 person';
 
       // Netto = brutto minus ränteavdraget (det som faktiskt lämnar plånboken)
       const netMonthly = gross - deduction / 12;
@@ -1541,8 +1415,7 @@
     dpKrEl.value = nf0.format(525000);
     amortEl.value = '2';
     operatingEl.value = nf0.format(4000);
-    numBorrowersEl.value = '2';
-    renderBorrowers();
+    borrowerCount = 2;
     updateSegUI();
 
     addPart('3,5', 'rorlig');
