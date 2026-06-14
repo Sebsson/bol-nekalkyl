@@ -55,12 +55,20 @@
         background: transparent !important;
       }
       /* Tightare luft så innehållet får plats på en sida */
-      #report .mt-8 { margin-top: 1.1rem !important; }
-      #report .mt-9 { margin-top: 1.1rem !important; }
-      #report .mt-7 { margin-top: 0.9rem !important; }
-      #report .pb-6 { padding-bottom: 0.7rem !important; }
-      #report .mt-5 { margin-top: 0.6rem !important; }
-      #report .gap-y-5 { row-gap: 0.7rem !important; }
+      #report .mt-8 { margin-top: 0.95rem !important; }
+      #report .mt-9 { margin-top: 0.85rem !important; }
+      #report .mt-7 { margin-top: 0.8rem !important; }
+      #report .pb-6 { padding-bottom: 0.6rem !important; }
+      #report .mt-5 { margin-top: 0.55rem !important; }
+      #report .mt-3 { margin-top: 0.4rem !important; }
+      #report .mt-2 { margin-top: 0.3rem !important; }
+      #report .gap-y-5 { row-gap: 0.6rem !important; }
+      #report .gap-y-3 { row-gap: 0.4rem !important; }
+      #report .py-4 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+      /* Detaljsektionerna sätts i två kolumner vid utskrift så hela sammanställningen ryms på en A4 */
+      #report-cols { column-count: 2; column-gap: 1.6rem; }
+      #report-cols > div { break-inside: avoid; margin-top: 0 !important; margin-bottom: 0.85rem !important; }
+      #report-cols > div:first-child { margin-top: 0 !important; }
       #report td, #report th { padding-top: 0.32rem !important; padding-bottom: 0.32rem !important; }
       tr { break-inside: avoid; }
       /* Tydligare, lite fetare linjer i den exporterade sammanställningen */
@@ -95,6 +103,9 @@
               <h2 class="text-xl font-light tracking-tight text-ink">Bolånekalkyl &ndash; sammanställning</h2>
               <p id="r-objectName" class="mt-1 text-base font-normal text-ink"></p>
               <p id="reportDate" class="mt-1 text-xs font-light text-slate-400"></p>
+              <p class="mt-2 max-w-md text-xs font-light leading-relaxed text-slate-500">
+                Vad bostaden kostar att äga &ndash; per månad nu och framåt &ndash; och vilka kontanter som krävs vid köpet.
+              </p>
             </div>
             <button id="exportPdf" type="button"
               class="no-print inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
@@ -107,14 +118,17 @@
             <div>
               <p class="text-sm font-light text-slate-500">Månadskostnad (brutto)</p>
               <p id="r-gross" class="mt-1 text-3xl font-light tracking-tight text-ink">0 kr</p>
-              <p class="mt-1 text-xs font-light text-slate-400">totalt per månad</p>
+              <p class="mt-1 text-xs font-light text-slate-400">totalt per månad, innan ränteavdrag</p>
             </div>
             <div class="sm:border-l sm:border-slate-100 sm:pl-8">
               <p class="text-sm font-light text-slate-500">Månadskostnad (netto)</p>
               <p id="r-net" class="mt-1 text-3xl font-light tracking-tight text-ink">0 kr</p>
-              <p class="mt-1 text-xs font-light text-slate-400">efter ränteavdrag</p>
+              <p class="mt-1 text-xs font-light text-slate-400">efter ränteavdrag &ndash; det som lämnar plånboken</p>
             </div>
           </div>
+
+          <!-- Detaljsektioner: en kolumn på skärm, två kolumner vid utskrift för att rymmas på en A4 -->
+          <div id="report-cols">
 
           <!-- Bostad & finansiering -->
           <div class="mt-9">
@@ -216,6 +230,34 @@
             <p class="mt-3 text-xs font-light leading-relaxed text-slate-500" id="r-costNote"></p>
           </div>
 
+          <!-- Framtidsvision: månadskostnaden framåt -->
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Framtidsvision &ndash; månadskostnaden framåt</h3>
+            <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+              Lås inte blicken vid dagens siffra. När du amorterar minskar skulden, och då blir räntan lägre &ndash; så
+              bruttomånadskostnaden sjunker gradvis. Med dagens ränta, amorteringstakt och driftkostnad ser kommande år ut så här:
+            </p>
+            <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+              <div>
+                <p class="text-xs font-light text-slate-400">Idag</p>
+                <p id="r-fut0" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Om 5 år</p>
+                <p id="r-fut5" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Om 10 år</p>
+                <p id="r-fut10" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+              <div>
+                <p class="text-xs font-light text-slate-400">Om 15 år</p>
+                <p id="r-fut15" class="mt-1 text-base font-normal text-ink">0 kr</p>
+              </div>
+            </div>
+            <p id="r-futNote" class="mt-3 text-xs font-light leading-relaxed text-slate-500"></p>
+          </div>
+
           <!-- Låntagare -->
           <div id="r-borrowersSection" class="mt-9 hidden">
             <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Låntagare</h3>
@@ -257,6 +299,28 @@
             </table>
             <p class="mt-3 text-xs font-light leading-relaxed text-slate-500" id="r-oneTimeNote"></p>
           </div>
+
+          <!-- Diskret jämförelse: annan kontantinsats -->
+          <div class="mt-9">
+            <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Om kontantinsatsen vore 15 % eller 20 %</h3>
+            <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+              Större kontantinsats ger ett mindre lån och lägre månadskostnad &ndash; men kräver mer kontanter vid köpet.
+              Samma kalkyl med 15 % respektive 20 % i kontantinsats (oförändrad ränta, amorteringstakt och driftkostnad):
+            </p>
+            <table class="mt-3 w-full border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-slate-200 text-left">
+                  <th class="py-2 pr-4 font-medium text-slate-500">Kontantinsats</th>
+                  <th class="py-2 pr-4 font-medium text-slate-500">Belopp</th>
+                  <th class="py-2 pr-4 font-medium text-slate-500">Lånebelopp</th>
+                  <th class="py-2 text-right font-medium text-slate-500">Månadskostnad (brutto)</th>
+                </tr>
+              </thead>
+              <tbody id="r-dpCompare" class="font-light text-ink"></tbody>
+            </table>
+          </div>
+
+          </div><!-- /report-cols -->
 
         </div>
       </section>
@@ -787,6 +851,12 @@
     const rPantbrevNoteEl = document.getElementById('r-pantbrevNote');
     const rOneTimeTotalEl = document.getElementById('r-oneTimeTotal');
     const rOneTimeNoteEl = document.getElementById('r-oneTimeNote');
+    const rFut0El = document.getElementById('r-fut0');
+    const rFut5El = document.getElementById('r-fut5');
+    const rFut10El = document.getElementById('r-fut10');
+    const rFut15El = document.getElementById('r-fut15');
+    const rFutNoteEl = document.getElementById('r-futNote');
+    const rDpCompareEl = document.getElementById('r-dpCompare');
 
     document.getElementById('reportDate').textContent =
       'Upprättad ' + new Date().toLocaleDateString('sv-SE');
@@ -1369,6 +1439,53 @@
           ' + lagfart ' + formatKr(lagfart) + ' + pantbrev ' + formatKr(pantbrev) +
           ' = ' + formatKr(oneTime) + '.'
         : '';
+
+      // ---- Framtidsvision: bruttomånadskostnad om 0, 5, 10 och 15 år ----
+      // Amortering och drift ligger fast; det är räntan som krymper med skulden.
+      const futureGross = (yearsAhead) => {
+        const debtThen = Math.max(currentLoan - monthlyAmort * 12 * yearsAhead, 0);
+        const interestThen = debtThen * (avgRate / 100) / 12;
+        const amortThen = Math.min(monthlyAmort, debtThen);
+        return interestThen + amortThen + drift;
+      };
+      rFut0El.textContent = formatKr(futureGross(0));
+      rFut5El.textContent = formatKr(futureGross(5));
+      rFut10El.textContent = formatKr(futureGross(10));
+      rFut15El.textContent = formatKr(futureGross(15));
+      const debtIn15 = Math.max(currentLoan - monthlyAmort * 12 * 15, 0);
+      rFutNoteEl.textContent = currentLoan > 0
+        ? 'Det är räntedelen som krymper – amorteringen (' + formatKr(monthlyAmort) +
+          '/mån) och driftkostnaden ligger kvar ungefär som idag. Skulden minskar från ' +
+          formatKr(currentLoan) + ' till ' + formatKr(debtIn15) + ' på 15 år.'
+        : '';
+
+      // ---- Diskret jämförelse: 15 % respektive 20 % kontantinsats ----
+      // Använder samma snittränta, amorteringstakt och drift, men med ett annat lånebelopp.
+      const dpScenarioRow = (label, scenarioPct, highlight) => {
+        const sDown = price * (scenarioPct / 100);
+        const sLoan = Math.max(price - sDown, 0);
+        const sInterest = sLoan * (avgRate / 100) / 12;
+        const sAmort = (amortPct / 100) * sLoan / 12;
+        const sGross = sInterest + sAmort + drift;
+        const rowCls = highlight
+          ? 'border-b border-slate-100 bg-slate-50 font-medium text-ink'
+          : 'border-b border-slate-100';
+        return '<tr class="' + rowCls + '">' +
+          '<td class="py-2.5 pr-4">' + label + '</td>' +
+          '<td class="py-2.5 pr-4">' + formatKr(sDown) + '</td>' +
+          '<td class="py-2.5 pr-4">' + formatKr(sLoan) + '</td>' +
+          '<td class="py-2.5 text-right">' + formatKr(sGross) + '</td>' +
+        '</tr>';
+      };
+      if (price > 0) {
+        rDpCompareEl.innerHTML =
+          dpScenarioRow('Din kalkyl (' + nf1.format(dpPct) + ' %)', dpPct, true) +
+          dpScenarioRow('15 %', 15, false) +
+          dpScenarioRow('20 %', 20, false);
+      } else {
+        rDpCompareEl.innerHTML =
+          '<tr><td colspan="4" class="py-2.5 font-light text-slate-400">Fyll i köpeskilling för att jämföra.</td></tr>';
+      }
 
       // ---- Förhandsvisning: 36 månader med krympande skuld ----
       trendData = [];
