@@ -65,10 +65,10 @@
     @media print {
       /* margin: 0 tar bort webbläsarens sidhuvud/sidfot (datum, titel, URL, sidnummer) */
       @page { size: A4; margin: 0; }
-      html { font-size: 11px; }              /* skala ned så allt ryms på en sida */
+      html { font-size: 12px; }               /* lagom skala – fyller sidan utan att svämma över */
       html, body { background: #fff !important; }
       .no-print { display: none !important; }
-      main { padding: 13mm 15mm !important; min-height: 0 !important; }
+      main { padding: 15mm 17mm !important; min-height: 0 !important; }
       main .mx-auto { max-width: none !important; }
       #report { margin: 0 !important; }
       /* Ingen ram runt sammanställningen vid utskrift */
@@ -79,22 +79,22 @@
         padding: 0 !important;
         background: transparent !important;
       }
-      /* Tightare luft så innehållet får plats på en sida */
-      #report .mt-8 { margin-top: 0.95rem !important; }
-      #report .mt-9 { margin-top: 0.85rem !important; }
-      #report .mt-7 { margin-top: 0.8rem !important; }
-      #report .pb-6 { padding-bottom: 0.6rem !important; }
-      #report .mt-5 { margin-top: 0.55rem !important; }
-      #report .mt-3 { margin-top: 0.4rem !important; }
-      #report .mt-2 { margin-top: 0.3rem !important; }
-      #report .gap-y-5 { row-gap: 0.6rem !important; }
-      #report .gap-y-3 { row-gap: 0.4rem !important; }
-      #report .py-4 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+      /* Luftig men ändå ensidig layout – fyller A4 så det inte blir död yta nedtill */
+      #report .mt-8 { margin-top: 1.3rem !important; }
+      #report .mt-9 { margin-top: 1.3rem !important; }
+      #report .mt-7 { margin-top: 1.1rem !important; }
+      #report .pb-6 { padding-bottom: 0.95rem !important; }
+      #report .mt-5 { margin-top: 0.9rem !important; }
+      #report .mt-3 { margin-top: 0.6rem !important; }
+      #report .mt-2 { margin-top: 0.45rem !important; }
+      #report .gap-y-5 { row-gap: 0.95rem !important; }
+      #report .gap-y-3 { row-gap: 0.6rem !important; }
+      #report .py-4 { padding-top: 0.7rem !important; padding-bottom: 0.7rem !important; }
       /* Detaljsektionerna sätts i två kolumner vid utskrift så hela sammanställningen ryms på en A4 */
-      #report-cols { column-count: 2; column-gap: 1.6rem; }
-      #report-cols > div { break-inside: avoid; margin-top: 0 !important; margin-bottom: 0.85rem !important; }
+      #report-cols { column-count: 2; column-gap: 1.9rem; }
+      #report-cols > div { break-inside: avoid; margin-top: 0 !important; margin-bottom: 1.25rem !important; }
       #report-cols > div:first-child { margin-top: 0 !important; }
-      #report td, #report th { padding-top: 0.32rem !important; padding-bottom: 0.32rem !important; }
+      #report td, #report th { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
       tr { break-inside: avoid; }
       /* Tydligare, lite fetare linjer i den exporterade sammanställningen */
       #report .border-t, #report .border-b, #report .sm\:border-l {
