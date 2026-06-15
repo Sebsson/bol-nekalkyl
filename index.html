@@ -197,6 +197,16 @@
     }
     html.dark .drawer-panel { box-shadow: -24px 0 60px -28px rgba(0,0,0,0.7); }
 
+    /* Bekräftelsedialog (osparade ändringar) */
+    .modal-dialog { transition: opacity .2s ease, transform .2s ease; }
+    @media (prefers-reduced-motion: reduce) {
+      .modal-dialog { transition: none; }
+    }
+
+    /* Flytande spara-knapp – alltid åtkomlig oavsett scrollposition */
+    .saved-fab { box-shadow: 0 10px 30px -10px rgba(43,103,119,0.55); }
+    html.dark .saved-fab { box-shadow: 0 10px 30px -10px rgba(0,0,0,0.7); }
+
     /* Utskrift / PDF-export */
     @media print {
       /* margin: 0 tar bort webbläsarens sidhuvud/sidfot (datum, titel, URL, sidnummer) */
@@ -887,6 +897,15 @@
     </div>
   </main>
 
+  <!-- Flytande genväg till sparade kalkyler – alltid synlig -->
+  <button id="savedFab" type="button" aria-label="Sparade kalkyler"
+    class="saved-fab no-print fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white transition hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+    <span class="sr-only">Öppna sparade kalkyler</span>
+  </button>
+
   <!-- Slide-over: spara, lista och importera kalkyler -->
   <div id="savedDrawer" class="no-print fixed inset-0 z-50 hidden" aria-hidden="true">
     <div id="savedBackdrop" class="drawer-backdrop absolute inset-0 bg-slate-900/30 opacity-0"></div>
@@ -970,6 +989,30 @@
         <p class="mt-2 text-xs font-light leading-relaxed text-slate-400">
           Exportera till en JSON-fil för att flytta kalkyler mellan enheter eller säkerhetskopiera.
         </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bekräftelse: osparade ändringar innan en sparad kalkyl öppnas -->
+  <div id="confirmSaveModal" class="no-print fixed inset-0 z-[60] hidden items-center justify-center p-4" aria-hidden="true">
+    <div id="confirmSaveBackdrop" class="drawer-backdrop absolute inset-0 bg-slate-900/40 opacity-0"></div>
+    <div id="confirmSaveDialog" role="dialog" aria-modal="true" aria-labelledby="confirmSaveTitle"
+      class="modal-dialog surface relative w-full max-w-sm scale-95 rounded-2xl bg-white p-6 opacity-0">
+      <h2 id="confirmSaveTitle" class="text-lg font-light tracking-tight text-ink">Spara dina ändringar först?</h2>
+      <p id="confirmSaveBody" class="mt-2 text-sm font-light leading-relaxed text-slate-500"></p>
+      <div class="mt-6 flex flex-col gap-2">
+        <button id="confirmSaveAndOpen" type="button"
+          class="exp-btn inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-dark hover:shadow">
+          Spara och öppna
+        </button>
+        <button id="confirmOpenNoSave" type="button"
+          class="ghost-btn inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:border-brand hover:text-brand">
+          Öppna utan att spara
+        </button>
+        <button id="confirmCancel" type="button"
+          class="ghost-btn inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 transition hover:text-ink">
+          Avbryt
+        </button>
       </div>
     </div>
   </div>
@@ -2131,10 +2174,17 @@
       } catch (e) { /* ignorera */ }
     }
 
+    // Ögonblicksbild av formuläret vid senaste spara/öppna – används för att
+    // avgöra om det finns osparade ändringar i det nuvarande arbetet.
+    let cleanSnapshot = '';
+    function markClean() { cleanSnapshot = JSON.stringify(collectState()); }
+    function isDirty() { return cleanSnapshot !== JSON.stringify(collectState()); }
+
     const drawerEl = document.getElementById('savedDrawer');
     const backdropEl = document.getElementById('savedBackdrop');
     const panelEl = document.getElementById('savedPanel');
     const openSavedBtn = document.getElementById('openSaved');
+    const savedFab = document.getElementById('savedFab');
     const closeSavedBtn = document.getElementById('closeSaved');
     const saveNameEl = document.getElementById('saveName');
     const saveNewBtn = document.getElementById('saveNewBtn');
@@ -2243,6 +2293,27 @@
       syncObjectName();
       render();
       saveState();
+      markClean();
+    }
+
+    // Sparar det nuvarande arbetet: uppdaterar den inlästa kalkylen om en sådan
+    // finns, annars som en ny namngiven post (namn från objektets namn).
+    function saveCurrentWork() {
+      const list = loadSaved();
+      const item = loadedId ? list.find((s) => s.id === loadedId) : null;
+      if (item) {
+        item.savedAt = new Date().toISOString();
+        item.state = collectState();
+      } else {
+        list.push({
+          id: newId(),
+          name: objectNameEl.value.trim() || 'Namnlös kalkyl',
+          savedAt: new Date().toISOString(),
+          state: collectState(),
+        });
+      }
+      writeSaved(list);
+      markClean();
     }
 
     // ---- Öppna/stäng panelen ----
@@ -2271,10 +2342,13 @@
     }
 
     openSavedBtn.addEventListener('click', openDrawer);
+    savedFab.addEventListener('click', openDrawer);
     closeSavedBtn.addEventListener('click', closeDrawer);
     backdropEl.addEventListener('click', closeDrawer);
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !drawerEl.classList.contains('hidden')) closeDrawer();
+      // Låt en öppen bekräftelsedialog fånga Escape först – stäng inte panelen bakom.
+      if (e.key === 'Escape' && !drawerEl.classList.contains('hidden')
+        && confirmModalEl.classList.contains('hidden')) closeDrawer();
     });
 
     // ---- Spara-åtgärder ----
@@ -2284,6 +2358,7 @@
       list.push(item);
       writeSaved(list);
       loadedId = item.id;
+      markClean();
       refreshSaveActions();
       renderSavedList();
       setHint('Sparad ✓');
@@ -2297,6 +2372,7 @@
       item.savedAt = new Date().toISOString();
       item.state = collectState();
       writeSaved(list);
+      markClean();
       refreshSaveActions();
       renderSavedList();
       setHint('Uppdaterad ✓');
@@ -2312,6 +2388,7 @@
       writeSaved(list);
       loadedId = item.id;
       saveNameEl.value = name;
+      markClean();
       refreshSaveActions();
       renderSavedList();
       setHint('Kopia sparad ✓');
@@ -2325,7 +2402,14 @@
       const action = e.target.closest('[data-action]')?.dataset.action;
       if (action === 'open') {
         const item = loadSaved().find((s) => s.id === id);
-        if (item) { loadCalculation(item); closeDrawer(); }
+        if (!item) return;
+        // Erbjud att spara nuvarande arbete först om det finns osparade ändringar.
+        if (isDirty()) {
+          openConfirmModal(item);
+        } else {
+          loadCalculation(item);
+          closeDrawer();
+        }
       } else if (action === 'delete') {
         const item = loadSaved().find((s) => s.id === id);
         if (!item) return;
@@ -2335,6 +2419,61 @@
         refreshSaveActions();
         renderSavedList();
       }
+    });
+
+    // ---- Bekräftelsedialog: osparade ändringar innan en kalkyl öppnas ----
+    const confirmModalEl = document.getElementById('confirmSaveModal');
+    const confirmBackdropEl = document.getElementById('confirmSaveBackdrop');
+    const confirmDialogEl = document.getElementById('confirmSaveDialog');
+    const confirmBodyEl = document.getElementById('confirmSaveBody');
+    const confirmSaveAndOpenBtn = document.getElementById('confirmSaveAndOpen');
+    const confirmOpenNoSaveBtn = document.getElementById('confirmOpenNoSave');
+    const confirmCancelBtn = document.getElementById('confirmCancel');
+
+    let pendingOpenItem = null;
+
+    function openConfirmModal(item) {
+      pendingOpenItem = item;
+      const verb = loadedId ? 'uppdatera den' : 'spara den';
+      confirmBodyEl.textContent = 'Du har osparade ändringar i ditt nuvarande arbete. Vill du '
+        + verb + ' innan du öppnar «' + item.name + '»?';
+      confirmModalEl.classList.remove('hidden');
+      confirmModalEl.classList.add('flex');
+      confirmModalEl.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => {
+        confirmBackdropEl.classList.remove('opacity-0');
+        confirmDialogEl.classList.remove('opacity-0', 'scale-95');
+      });
+    }
+
+    function closeConfirmModal() {
+      confirmBackdropEl.classList.add('opacity-0');
+      confirmDialogEl.classList.add('opacity-0', 'scale-95');
+      confirmModalEl.setAttribute('aria-hidden', 'true');
+      setTimeout(() => {
+        confirmModalEl.classList.add('hidden');
+        confirmModalEl.classList.remove('flex');
+      }, 200);
+      pendingOpenItem = null;
+    }
+
+    confirmSaveAndOpenBtn.addEventListener('click', () => {
+      const item = pendingOpenItem;
+      saveCurrentWork();
+      closeConfirmModal();
+      if (item) { loadCalculation(item); closeDrawer(); }
+    });
+
+    confirmOpenNoSaveBtn.addEventListener('click', () => {
+      const item = pendingOpenItem;
+      closeConfirmModal();
+      if (item) { loadCalculation(item); closeDrawer(); }
+    });
+
+    confirmCancelBtn.addEventListener('click', closeConfirmModal);
+    confirmBackdropEl.addEventListener('click', closeConfirmModal);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !confirmModalEl.classList.contains('hidden')) closeConfirmModal();
     });
 
     // ---- Export / import (JSON-fil) ----
@@ -2392,6 +2531,9 @@
         localStorage.removeItem(LOADED_KEY);
       }
     } catch (e) { /* ignorera */ }
+
+    // Utgångsläge: formuläret räknas som "rent" tills något ändras.
+    markClean();
   </script>
 </body>
 </html>
