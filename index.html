@@ -60,6 +60,39 @@
     .trend-bar { transition: filter .15s ease; cursor: pointer; }
     .trend-bar:hover { filter: brightness(0.82); }
     .chart-hit { cursor: pointer; }
+    /* Diagrammen ska kunna pekas/dras på touch utan att sidan scrollar bort tooltipen */
+    #trendChart, #amortReqChart { touch-action: none; }
+
+    /* Inline-förklaringar: lugna, hopfällbara "Vad betyder det?" utan extra bibliotek */
+    .explainer > summary {
+      list-style: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      width: fit-content;
+      color: #64748b;
+      transition: color .15s ease;
+    }
+    .explainer > summary::-webkit-details-marker { display: none; }
+    .explainer > summary:hover { color: #2b6777; }
+    .explainer > summary:focus-visible { outline: 2px solid rgba(43,103,119,0.45); outline-offset: 3px; border-radius: 6px; }
+    .explainer > summary .chev { transition: transform .2s ease; }
+    .explainer[open] > summary .chev { transform: rotate(180deg); }
+    .explainer[open] > summary { color: #2b6777; }
+
+    /* Mikrointeraktion: en mjuk puls när huvudsiffran uppdateras live vid skrivning */
+    @keyframes valuePulse {
+      0%   { color: #2b6777; }
+      100% { color: #1f2933; }
+    }
+    .value-flash { animation: valuePulse .55s ease-out; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .value-flash { animation: none; }
+      .ltv-bar-anim { transition: none !important; }
+      .explainer > summary .chev { transition: none; }
+    }
 
     /* Utskrift / PDF-export */
     @media print {
@@ -354,15 +387,18 @@
       <div class="no-print grid grid-cols-1 lg:grid-cols-5 gap-10">
 
         <!-- Inmatning -->
-        <section class="lg:col-span-3">
+        <section class="lg:col-span-3" aria-label="Inmatning av kalkyluppgifter">
           <div class="space-y-8">
+
+            <!-- Grupprubrik: Bostad & lån -->
+            <h2 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Bostad &amp; lån</h2>
 
             <!-- Objektets namn -->
             <div>
               <label for="objectName" class="block text-sm font-medium text-slate-600">Objektets namn</label>
-              <p class="mt-1 text-xs font-light text-slate-400">T.ex. adress eller mäklarens rubrik &ndash; visas i sammanställningen</p>
+              <p id="objectName-help" class="mt-1 text-xs font-light text-slate-400">T.ex. adress eller mäklarens rubrik &ndash; visas i sammanställningen</p>
               <div class="relative mt-3">
-                <input id="objectName" type="text" autocomplete="off" maxlength="80"
+                <input id="objectName" type="text" autocomplete="off" maxlength="80" aria-describedby="objectName-help"
                   class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-lg font-normal text-ink transition placeholder:text-slate-300"
                   placeholder="Namnlöst objekt" />
               </div>
@@ -371,9 +407,9 @@
             <!-- Köpeskilling -->
             <div>
               <label for="price" class="block text-sm font-medium text-slate-600">Köpeskilling</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Bostadens pris</p>
+              <p id="price-help" class="mt-1 text-xs font-light text-slate-400">Bostadens pris &ndash; det överenskomna priset i kronor</p>
               <div class="relative mt-3">
-                <input id="price" type="text" inputmode="numeric" autocomplete="off"
+                <input id="price" type="text" inputmode="numeric" autocomplete="off" aria-describedby="price-help"
                   class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
                   placeholder="0" />
                 <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
@@ -382,42 +418,71 @@
 
             <!-- Kontantinsats -->
             <div>
-              <label class="block text-sm font-medium text-slate-600">Kontantinsats</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Ange i kronor eller procent &ndash; fälten räknar om varandra</p>
+              <span id="downPayment-label" class="block text-sm font-medium text-slate-600">Kontantinsats</span>
+              <p id="downPayment-help" class="mt-1 text-xs font-light text-slate-400">Ange i kronor eller procent &ndash; fälten räknar om varandra</p>
               <div class="mt-3 grid grid-cols-2 gap-4">
                 <div class="relative">
                   <input id="downPaymentKr" type="text" inputmode="numeric" autocomplete="off"
+                    aria-label="Kontantinsats i kronor" aria-describedby="downPayment-help"
                     class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
                     placeholder="0" />
                   <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
                 </div>
                 <div class="relative">
                   <input id="downPaymentPct" type="text" inputmode="decimal" autocomplete="off"
+                    aria-label="Kontantinsats i procent" aria-describedby="downPayment-help"
                     class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-10 text-lg font-normal text-ink transition placeholder:text-slate-300"
                     placeholder="0" />
                   <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">%</span>
                 </div>
               </div>
+              <details class="explainer mt-3">
+                <summary class="text-xs font-light">
+                  <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg>
+                  Hur stor måste kontantinsatsen vara?
+                  <svg class="chev h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </summary>
+                <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+                  Banken får som regel låna ut högst 85 % av bostadens värde, så du behöver minst
+                  <span class="font-medium text-ink">15 % kontantinsats</span> i egna pengar. En större insats ger
+                  lägre belåningsgrad, mindre lån och lägre månadskostnad &ndash; men kräver mer kontanter vid köpet.
+                </p>
+              </details>
             </div>
 
             <!-- Amorteringsprocent -->
             <div>
               <label for="amortPct" class="block text-sm font-medium text-slate-600">Amorteringstakt</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Årlig amortering du själv väljer</p>
+              <p id="amortPct-help" class="mt-1 text-xs font-light text-slate-400">Hur stor andel av lånet du betalar av per år</p>
               <div class="relative mt-3">
-                <input id="amortPct" type="text" inputmode="decimal" autocomplete="off"
+                <input id="amortPct" type="text" inputmode="decimal" autocomplete="off" aria-describedby="amortPct-help"
                   class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-10 text-lg font-normal text-ink transition placeholder:text-slate-300"
                   placeholder="0" />
                 <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">%</span>
               </div>
+              <details class="explainer mt-3">
+                <summary class="text-xs font-light">
+                  <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg>
+                  Vad är amorteringskravet?
+                  <svg class="chev h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </summary>
+                <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+                  Amortering är avbetalning på själva skulden &ndash; ett påtvingat sparande, inte en ren kostnad.
+                  Det <span class="font-medium text-ink">lagstadgade amorteringskravet</span> är minst
+                  <span class="font-medium text-ink">2 % per år</span> över 70 % belåningsgrad och
+                  <span class="font-medium text-ink">1 %</span> mellan 50 och 70 %; under 50 % finns inget krav.
+                  Lånar du mer än 4,5 gånger din årsinkomst tillkommer 1 procentenhet. Här anger du den takt du
+                  själv planerar &ndash; sektionen längre ned visar hur det lagstadgade kravet trappas ned över tid.
+                </p>
+              </details>
             </div>
 
             <!-- Driftkostnad -->
             <div>
               <label for="operatingCost" class="block text-sm font-medium text-slate-600">Driftkostnad</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Löpande kostnad per månad</p>
+              <p id="operatingCost-help" class="mt-1 text-xs font-light text-slate-400">Löpande boendekostnad per månad &ndash; t.ex. avgift, el, värme, vatten och försäkring</p>
               <div class="relative mt-3">
-                <input id="operatingCost" type="text" inputmode="numeric" autocomplete="off"
+                <input id="operatingCost" type="text" inputmode="numeric" autocomplete="off" aria-describedby="operatingCost-help"
                   class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-20 text-lg font-normal text-ink transition placeholder:text-slate-300"
                   placeholder="0" />
                 <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr/mån</span>
@@ -426,64 +491,88 @@
 
             <!-- Låntagare -->
             <div>
-              <label class="block text-sm font-medium text-slate-600">Antal låntagare</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Påverkar bara ränteavdraget &ndash; 30 % upp till 100 000 kr/år och tak per person. Vid två låntagare delas lånet 50/50.</p>
+              <span id="borrowers-label" class="block text-sm font-medium text-slate-600">Antal låntagare</span>
+              <p id="borrowers-help" class="mt-1 text-xs font-light text-slate-400">Påverkar bara ränteavdraget. Vid två låntagare delas lånet 50/50.</p>
 
-              <div id="borrowersSeg" class="mt-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
-                <button type="button" data-borrowers="1" class="seg rounded-lg px-4 py-1.5 font-medium transition">1 person</button>
-                <button type="button" data-borrowers="2" class="seg rounded-lg px-4 py-1.5 font-medium transition">2 personer</button>
+              <div id="borrowersSeg" role="group" aria-labelledby="borrowers-label" class="mt-3 inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" data-borrowers="1" aria-pressed="false" class="seg rounded-lg px-4 py-1.5 font-medium transition">1 person</button>
+                <button type="button" data-borrowers="2" aria-pressed="false" class="seg rounded-lg px-4 py-1.5 font-medium transition">2 personer</button>
               </div>
+
+              <details class="explainer mt-3">
+                <summary class="text-xs font-light">
+                  <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg>
+                  Vad är ränteavdraget?
+                  <svg class="chev h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </summary>
+                <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+                  Du får tillbaka en del av räntan som skattereduktion:
+                  <span class="font-medium text-ink">30 %</span> på räntor upp till 100 000 kr per år och person,
+                  <span class="font-medium text-ink">21 %</span> på det som överstiger. Med två låntagare delas räntan
+                  lika och taket gäller var och en, vilket ofta ger ett större avdrag. Avdraget gör din
+                  <span class="font-medium text-ink">nettokostnad</span> lägre än bruttokostnaden.
+                </p>
+              </details>
+            </div>
+
+            <!-- Grupprubrik: Engångskostnader -->
+            <div class="pt-2">
+              <h2 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Engångskostnader vid köp</h2>
+              <p class="mt-1 text-xs font-light leading-relaxed text-slate-500">
+                Kontanter som behövs vid tillträdet utöver kontantinsatsen. Lagfart och pantbrev är
+                <span class="font-medium text-ink">stämpelskatter</span> till staten.
+              </p>
             </div>
 
             <!-- Lagfart -->
             <div>
-              <label class="block text-sm font-medium text-slate-600">Lagfart</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Stämpelskatt 1,5 % av köpeskillingen + 825 kr</p>
+              <span id="lagfart-label" class="block text-sm font-medium text-slate-600">Lagfart</span>
+              <p class="mt-1 text-xs font-light text-slate-400">Bevis på att du äger bostaden &ndash; stämpelskatt 1,5 % av köpeskillingen + 825 kr</p>
 
-              <div id="lagfartSeg" class="mt-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
-                <button type="button" data-lagfart-mode="auto" class="seg rounded-lg px-3 py-1.5 font-medium transition">Räkna ut</button>
-                <button type="button" data-lagfart-mode="manual" class="seg rounded-lg px-3 py-1.5 font-medium transition">Ange manuellt</button>
+              <div id="lagfartSeg" role="group" aria-labelledby="lagfart-label" class="mt-3 inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" data-lagfart-mode="auto" aria-pressed="false" class="seg rounded-lg px-3 py-1.5 font-medium transition">Räkna ut</button>
+                <button type="button" data-lagfart-mode="manual" aria-pressed="false" class="seg rounded-lg px-3 py-1.5 font-medium transition">Ange manuellt</button>
               </div>
 
               <div id="lagfartManualWrap" class="relative mt-3 hidden">
-                <input id="lagfartManual" type="text" inputmode="numeric" autocomplete="off"
+                <input id="lagfartManual" type="text" inputmode="numeric" autocomplete="off" aria-label="Lagfart, manuellt belopp"
                   class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
                   placeholder="0" />
                 <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
               </div>
 
-              <p id="lagfartDisplay" class="mt-3 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
+              <p id="lagfartDisplay" aria-live="polite" class="mt-3 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
             </div>
 
             <!-- Pantbrev -->
             <div>
-              <label class="block text-sm font-medium text-slate-600">Pantbrev</label>
-              <p class="mt-1 text-xs font-light text-slate-400">Stämpelskatt 2 % på nytt pantbrev + 375 kr</p>
+              <span id="pantbrev-label" class="block text-sm font-medium text-slate-600">Pantbrev</span>
+              <p class="mt-1 text-xs font-light text-slate-400">Bankens säkerhet i bostaden &ndash; stämpelskatt 2 % på nytt pantbrev + 375 kr</p>
 
-              <div id="pantbrevSeg" class="mt-3 inline-flex rounded-xl bg-slate-100 p-1 text-sm">
-                <button type="button" data-pantbrev-mode="auto" class="seg rounded-lg px-3 py-1.5 font-medium transition">Räkna ut</button>
-                <button type="button" data-pantbrev-mode="manual" class="seg rounded-lg px-3 py-1.5 font-medium transition">Ange manuellt</button>
+              <div id="pantbrevSeg" role="group" aria-labelledby="pantbrev-label" class="mt-3 inline-flex flex-wrap rounded-xl bg-slate-100 p-1 text-sm">
+                <button type="button" data-pantbrev-mode="auto" aria-pressed="false" class="seg rounded-lg px-3 py-1.5 font-medium transition">Räkna ut</button>
+                <button type="button" data-pantbrev-mode="manual" aria-pressed="false" class="seg rounded-lg px-3 py-1.5 font-medium transition">Ange manuellt</button>
               </div>
 
               <div id="pantbrevAutoWrap" class="mt-3">
                 <label for="pantbrevExisting" class="block text-xs font-medium text-slate-500">Befintliga pantbrev</label>
                 <div class="relative mt-1.5">
-                  <input id="pantbrevExisting" type="text" inputmode="numeric" autocomplete="off"
+                  <input id="pantbrevExisting" type="text" inputmode="numeric" autocomplete="off" aria-describedby="pantbrevExisting-help"
                     class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
                     placeholder="0" />
                   <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
                 </div>
-                <p class="mt-1.5 text-xs font-light text-slate-400">Pantbrev som redan finns på bostaden – nya pantbrev tas ut på lånebeloppet minus dessa.</p>
+                <p id="pantbrevExisting-help" class="mt-1.5 text-xs font-light text-slate-400">Pantbrev som redan finns på bostaden – nya pantbrev tas ut på lånebeloppet minus dessa.</p>
               </div>
 
               <div id="pantbrevManualWrap" class="relative mt-3 hidden">
-                <input id="pantbrevManual" type="text" inputmode="numeric" autocomplete="off"
+                <input id="pantbrevManual" type="text" inputmode="numeric" autocomplete="off" aria-label="Pantbrev, manuellt belopp"
                   class="field-input w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 pr-12 text-lg font-normal text-ink transition placeholder:text-slate-300"
                   placeholder="0" />
                 <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-slate-400">kr</span>
               </div>
 
-              <p id="pantbrevDisplay" class="mt-3 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
+              <p id="pantbrevDisplay" aria-live="polite" class="mt-3 text-xs font-light leading-relaxed text-slate-400">&nbsp;</p>
             </div>
 
             <!-- Total engångskostnad -->
@@ -499,12 +588,12 @@
         </section>
 
         <!-- Resultat -->
-        <aside class="lg:col-span-2">
+        <aside class="lg:col-span-2" aria-label="Resultat">
           <div class="surface lg:sticky lg:top-16 rounded-2xl border border-slate-200/80 bg-white p-7">
 
             <!-- Huvudfokus: månadskostnad -->
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Månadskostnad</p>
-            <p id="grossMonthly" class="mt-2 text-4xl font-light tracking-tight text-ink md:text-5xl">0 kr</p>
+            <p id="grossMonthly" aria-live="polite" class="mt-2 text-4xl font-light tracking-tight text-ink md:text-5xl">0 kr</p>
             <p class="mt-1 text-xs font-light text-slate-400">brutto per månad</p>
 
             <!-- Nedbrytning -->
@@ -534,6 +623,21 @@
               </div>
             </div>
 
+            <details class="explainer mt-6">
+              <summary class="text-xs font-light">
+                <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg>
+                Vad är en KALP-kalkyl?
+                <svg class="chev h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+                <span class="font-medium text-ink">KALP</span> står för &rdquo;Kvar Att Leva På&rdquo;. När banken prövar
+                din ansökan räknar den med en betydligt högre <span class="font-medium text-ink">kalkylränta</span>
+                (ofta 6&ndash;7 %) plus schablonbelopp för levnadskostnader, för att se att hushållet klarar boendet
+                även om räntan stiger. Den här kalkylen visar din <span class="font-medium text-ink">faktiska</span>
+                kostnad med dagens ränta &ndash; bankens KALP blir därför ofta strängare.
+              </p>
+            </details>
+
             <div class="my-7 h-px bg-slate-100"></div>
 
             <h2 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Sammanfattning</h2>
@@ -551,10 +655,22 @@
                   <p class="text-sm font-light text-slate-500">Belåningsgrad</p>
                   <p id="ltvValue" class="text-2xl font-light tracking-tight text-ink">0,0&nbsp;%</p>
                 </div>
-                <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div id="ltvBar" class="h-full rounded-full bg-slate-400 transition-all duration-300" style="width: 0%"></div>
+                <div id="ltvTrack" class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+                  role="progressbar" aria-label="Belåningsgrad" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div id="ltvBar" class="ltv-bar-anim h-full rounded-full bg-slate-400 transition-all duration-300" style="width: 0%"></div>
                 </div>
-                <p id="ltvNote" class="mt-2 text-xs font-light text-slate-400">&nbsp;</p>
+                <p id="ltvNote" aria-live="polite" class="mt-2 text-xs font-light text-slate-400">&nbsp;</p>
+                <details class="explainer mt-2">
+                  <summary class="text-xs font-light">
+                    <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg>
+                    Vad är belåningsgrad?
+                    <svg class="chev h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </summary>
+                  <p class="mt-2 text-xs font-light leading-relaxed text-slate-500">
+                    Lånet delat med bostadens värde. Den styr både hur mycket du får låna (max 85 %) och
+                    amorteringskravet: 2 % per år över 70 % och 1 % mellan 50 och 70 %.
+                  </p>
+                </details>
               </div>
 
               <div class="h-px bg-slate-100"></div>
@@ -577,12 +693,27 @@
             <h2 class="text-lg font-light tracking-tight text-ink">Lånedelar</h2>
             <p class="mt-1 text-sm font-light text-slate-500">Dela upp lånet i delar med egen ränta och bindningstid.</p>
           </div>
-          <p id="partsTotal" class="text-xs font-light text-slate-400">&nbsp;</p>
+          <p id="partsTotal" aria-live="polite" class="text-xs font-light text-slate-400">&nbsp;</p>
         </div>
+
+        <details class="explainer mt-3">
+          <summary class="text-xs font-light">
+            <svg class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><circle cx="12" cy="7.5" r=".6" fill="currentColor" stroke="none"/></svg>
+            Rörlig eller bunden ränta?
+            <svg class="chev h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </summary>
+          <p class="mt-2 max-w-2xl text-xs font-light leading-relaxed text-slate-500">
+            <span class="font-medium text-ink">Bindningstiden</span> är hur länge räntan är låst. Rörlig (3 mån)
+            följer marknaden och ändras ofta, medan en bunden ränta ligger fast i t.ex. 1&ndash;5 år &ndash; tryggare men
+            oftast något dyrare. Många delar upp lånet i flera delar med olika bindningstid för att sprida risken.
+            Här kan du ge varje del en egen ränta och bindningstid; snitträntan viktas efter beloppen.
+          </p>
+        </details>
 
         <div id="partsList" class="mt-6 space-y-3"></div>
 
-        <div id="partsWarning" class="mt-4 hidden items-start gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm font-light text-amber-800">
+        <div id="partsWarning" role="status" aria-live="polite" class="mt-4 hidden items-start gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 px-4 py-3 text-sm font-light text-amber-800">
+          <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 9v4" stroke-linecap="round"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
           <span id="partsWarningText"></span>
         </div>
 
@@ -609,6 +740,7 @@
               <span>År 2</span>
               <span>År 3</span>
             </div>
+            <p class="mt-3 text-xs font-light text-slate-400">Håll muspekaren över &ndash; eller tryck på &ndash; en stapel för att se ränta, amortering och drift för den månaden.</p>
           </div>
         </div>
       </section>
@@ -624,6 +756,7 @@
         <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
           <div id="amortReqStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3"></div>
           <div id="amortReqChart" class="mt-7"></div>
+          <p class="mt-3 text-xs font-light text-slate-400">Håll muspekaren över &ndash; eller tryck på &ndash; kurvan för att se månadskostnaden vid varje tidpunkt. De streckade linjerna markerar när belåningsgraden passerar 70 % och 50 %.</p>
         </div>
       </section>
 
@@ -642,6 +775,17 @@
     function formatKr(value) {
       if (!isFinite(value)) value = 0;
       return nf0.format(Math.round(value)) + NBSP + 'kr';
+    }
+
+    // Sätter text och ger en mjuk puls när värdet faktiskt ändras – en lugn
+    // bekräftelse på att kalkylen räknar om live medan man skriver.
+    function setTextFlash(el, text) {
+      if (el.textContent === text) return;
+      el.textContent = text;
+      el.classList.remove('value-flash');
+      // Tvinga omstart av animationen även vid snabba ändringar i följd
+      void el.offsetWidth;
+      el.classList.add('value-flash');
     }
 
     // Tolkar ett inmatat strängvärde (med mellanslag, komma osv) till tal
@@ -682,6 +826,7 @@
     const loanAmountEl = document.getElementById('loanAmount');
     const ltvValueEl = document.getElementById('ltvValue');
     const ltvBarEl = document.getElementById('ltvBar');
+    const ltvTrackEl = document.getElementById('ltvTrack');
     const ltvNoteEl = document.getElementById('ltvNote');
 
     // Formaterar ett heltalsfält med mellanslag, behåller markörposition rimligt
@@ -705,6 +850,8 @@
 
       ltvValueEl.textContent = nf1.format(ltv).replace('-', '') + ' %';
       ltvBarEl.style.width = Math.min(ltv, 100) + '%';
+      ltvTrackEl.setAttribute('aria-valuenow', Math.round(Math.min(Math.max(ltv, 0), 100)));
+      ltvTrackEl.setAttribute('aria-valuetext', nf1.format(ltv).replace('-', '') + ' %');
 
       // Diskret färgsignal + notis utan att bryta lugnet
       let note = ' ';
@@ -983,12 +1130,30 @@
       container.style.position = 'relative';
       container.innerHTML = svg + overlay;
 
+      // Tillgänglighet: en kort textsammanfattning av kurvan för skärmläsare
+      container.setAttribute('role', 'img');
+      container.setAttribute('aria-label',
+        'Linjediagram över månadskostnaden. Start ' + formatKr(series[0]) +
+        ', slut ' + formatKr(series[n - 1]) + '.');
+
       container.onmousemove = (e) => {
         const cell = e.target.closest('[data-i]');
         if (!cell) { hideTooltip(); return; }
         showTooltip(e.clientX, e.clientY, breakdown[+cell.dataset.i]);
       };
       container.onmouseleave = hideTooltip;
+
+      // Touch: låt fingret dra längs diagrammet och visa samma tooltip som vid hover
+      const touchPick = (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        const cell = document.elementFromPoint(t.clientX, t.clientY);
+        const hit = cell && cell.closest && cell.closest('[data-i]');
+        if (hit && container.contains(hit)) showTooltip(t.clientX, t.clientY, breakdown[+hit.dataset.i]);
+      };
+      container.ontouchstart = touchPick;
+      container.ontouchmove = (e) => { e.preventDefault(); touchPick(e); };
+      container.ontouchend = hideTooltip;
     }
 
     let partIdSeq = 0;
@@ -1135,32 +1300,30 @@
     }
 
     // Uppdaterar de segmenterade knapparnas utseende + vilka fält som visas
+    // Markerar den aktiva knappen i en segmentkontroll – både visuellt och för
+    // skärmläsare via aria-pressed.
+    function setSegActive(btn, active) {
+      btn.classList.toggle('bg-white', active);
+      btn.classList.toggle('text-brand', active);
+      btn.classList.toggle('shadow-sm', active);
+      btn.classList.toggle('text-slate-500', !active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+
     function updateSegUI() {
       lagfartSegEl.querySelectorAll('[data-lagfart-mode]').forEach((btn) => {
-        const active = btn.dataset.lagfartMode === lagfartMode;
-        btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('text-brand', active);
-        btn.classList.toggle('shadow-sm', active);
-        btn.classList.toggle('text-slate-500', !active);
+        setSegActive(btn, btn.dataset.lagfartMode === lagfartMode);
       });
       lagfartManualWrapEl.classList.toggle('hidden', lagfartMode !== 'manual');
 
       pantbrevSegEl.querySelectorAll('[data-pantbrev-mode]').forEach((btn) => {
-        const active = btn.dataset.pantbrevMode === pantbrevMode;
-        btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('text-brand', active);
-        btn.classList.toggle('shadow-sm', active);
-        btn.classList.toggle('text-slate-500', !active);
+        setSegActive(btn, btn.dataset.pantbrevMode === pantbrevMode);
       });
       pantbrevAutoWrapEl.classList.toggle('hidden', pantbrevMode !== 'auto');
       pantbrevManualWrapEl.classList.toggle('hidden', pantbrevMode !== 'manual');
 
       borrowersSegEl.querySelectorAll('[data-borrowers]').forEach((btn) => {
-        const active = parseInt(btn.dataset.borrowers, 10) === getBorrowerCount();
-        btn.classList.toggle('bg-white', active);
-        btn.classList.toggle('text-brand', active);
-        btn.classList.toggle('shadow-sm', active);
-        btn.classList.toggle('text-slate-500', !active);
+        setSegActive(btn, parseInt(btn.dataset.borrowers, 10) === getBorrowerCount());
       });
     }
 
@@ -1253,7 +1416,7 @@
       const monthlyAmort = (amortPct / 100) * currentLoan / 12;
       const gross = monthlyInterest + monthlyAmort + drift;
 
-      grossMonthlyEl.textContent = formatKr(gross);
+      setTextFlash(grossMonthlyEl, formatKr(gross));
       amortMonthlyEl.textContent = formatKr(monthlyAmort);
       interestMonthlyEl.textContent = formatKr(monthlyInterest);
       driftMonthlyEl.textContent = formatKr(drift);
@@ -1434,12 +1597,28 @@
           'data-i="' + i + '"></div>';
       }).join('');
 
+      trendChartEl.setAttribute('role', 'img');
+      trendChartEl.setAttribute('aria-label',
+        'Stapeldiagram över månadskostnaden de tre första åren. Månad 1 ' +
+        formatKr(trendData[0].total) + ', månad 36 ' + formatKr(trendData[35].total) + '.');
+
       trendChartEl.onmousemove = (e) => {
         const bar = e.target.closest('[data-i]');
         if (!bar) { hideTooltip(); return; }
         showTooltip(e.clientX, e.clientY, trendData[+bar.dataset.i]);
       };
       trendChartEl.onmouseleave = hideTooltip;
+
+      const trendTouch = (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        const bar = el && el.closest && el.closest('[data-i]');
+        if (bar && trendChartEl.contains(bar)) showTooltip(t.clientX, t.clientY, trendData[+bar.dataset.i]);
+      };
+      trendChartEl.ontouchstart = trendTouch;
+      trendChartEl.ontouchmove = (e) => { e.preventDefault(); trendTouch(e); };
+      trendChartEl.ontouchend = hideTooltip;
 
       const stat = (label, value) =>
         '<div><p class="text-xs font-light text-slate-400">' + label + '</p>' +
