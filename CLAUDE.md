@@ -15,7 +15,7 @@ Vägledning för Claude när det jobbar i detta repo.
 
 ## Om projektet
 
-- En enda fristående HTML-fil: `bolanekalkyl.html`. All CSS och JavaScript är
+- En enda fristående HTML-fil: `index.html`. All CSS och JavaScript är
   inbyggd, Tailwind via CDN, Inter som typsnitt. Inget byggsteg.
 - Skandinavisk, modern och lugn estetik med mycket whitespace.
 - Svensk talformatering rakt igenom: mellanslag (U+00A0) som tusentalsavgränsare,
@@ -31,4 +31,4 @@ Vägledning för Claude när det jobbar i detta repo.
 ## Lokal förhandsvisning
 
 - Statisk server via `.claude/launch.json` (`python -m http.server 8123`).
-- Öppna `http://localhost:8123/bolanekalkyl.html`.
+- Öppna `http://localhost:8123/index.html`.
