@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Bolånekalkyl</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2b6777" />
@@ -57,6 +57,26 @@
       background-image: linear-gradient(180deg, #eef3f4 0%, #e4ecee 65%);
       transition: background-color .3s ease;
     }
+    /* Säkra zoner på mobil (PWA i helskärm med "notch"/hemindikator):
+       lägg till enhetens säkra marginaler så innehåll och flytande knapp inte
+       hamnar under statusfält eller hemindikator. */
+    main {
+      padding-left: max(1.25rem, env(safe-area-inset-left));
+      padding-right: max(1.25rem, env(safe-area-inset-right));
+    }
+    @media (min-width: 640px) {
+      main {
+        padding-left: max(1.5rem, env(safe-area-inset-left));
+        padding-right: max(1.5rem, env(safe-area-inset-right));
+      }
+    }
+    .saved-fab {
+      bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 0.5rem));
+      right: max(1.5rem, env(safe-area-inset-right));
+    }
+    /* Tabeller som kan bli breda får scrolla i sidled i stället för att spränga layouten */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
     /* Dölj spinnerpilar på nummerfält */
     input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -220,6 +240,8 @@
       html { font-size: 12px; }               /* lagom skala – fyller sidan utan att svämma över */
       html, body { background: #fff !important; }
       .no-print { display: none !important; }
+      /* Inga sidledsscroll-rutor på papper – tabellerna ska skrivas ut i sin helhet */
+      .table-scroll { overflow: visible !important; }
       main { padding: 15mm 17mm !important; min-height: 0 !important; }
       main .mx-auto { max-width: none !important; }
       #report { margin: 0 !important; }
@@ -259,11 +281,11 @@
   </style>
 </head>
 <body class="font-sans text-ink">
-  <main class="min-h-screen w-full px-6 py-16 md:py-24">
+  <main class="min-h-screen w-full py-12 sm:py-16 md:py-24">
     <div class="mx-auto max-w-3xl">
 
       <!-- Rubrik -->
-      <header class="no-print mb-14 flex items-start justify-between gap-4">
+      <header class="no-print mb-10 flex flex-col gap-5 sm:mb-14 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.2em] text-brand">Kalkyl</p>
           <h1 class="mt-3 text-3xl md:text-4xl font-light tracking-tight text-ink">Bolånekalkyl</h1>
@@ -272,7 +294,7 @@
             <span class="text-slate-400">Dina uppgifter sparas automatiskt i den här webbläsaren.</span>
           </p>
         </div>
-        <div class="flex shrink-0 items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 sm:shrink-0">
           <button id="themeToggle" type="button" aria-pressed="false" title="Växla mörkt läge"
             class="theme-toggle ghost-btn inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-brand hover:text-brand">
             <!-- Måne (visas i ljust läge) -->
@@ -303,8 +325,8 @@
       </header>
 
       <!-- Sammanställning (visas snyggt överst, även vid PDF-export) -->
-      <section id="report" class="mb-14">
-        <div class="report-card surface rounded-2xl border border-slate-200/80 bg-white p-8 md:p-10">
+      <section id="report" class="mb-10 sm:mb-14">
+        <div class="report-card surface rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 md:p-10">
 
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -375,7 +397,8 @@
           <!-- Lånedelar -->
           <div class="mt-9">
             <h3 class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Lånedelar</h3>
-            <table class="mt-3 w-full border-collapse text-sm">
+            <div class="table-scroll mt-3">
+            <table class="w-full border-collapse text-sm">
               <thead>
                 <tr class="border-b border-slate-200 text-left">
                   <th class="py-2 pr-4 font-medium text-slate-500">Belopp</th>
@@ -393,6 +416,7 @@
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
 
           <!-- Månadskostnad – nedbrytning -->
@@ -506,7 +530,8 @@
               Större kontantinsats ger ett mindre lån och lägre månadskostnad &ndash; men kräver mer kontanter vid köpet.
               Samma kalkyl med 15 % respektive 20 % i kontantinsats (oförändrad ränta, amorteringstakt och driftkostnad):
             </p>
-            <table class="mt-3 w-full border-collapse text-sm">
+            <div class="table-scroll mt-3">
+            <table class="w-full border-collapse text-sm">
               <thead>
                 <tr class="border-b border-slate-200 text-left">
                   <th class="py-2 pr-4 font-medium text-slate-500">Kontantinsats</th>
@@ -517,6 +542,7 @@
               </thead>
               <tbody id="r-dpCompare" class="font-light text-ink"></tbody>
             </table>
+            </div>
           </div>
 
           </div><!-- /report-cols -->
@@ -729,7 +755,7 @@
 
         <!-- Resultat -->
         <aside class="lg:col-span-2" aria-label="Resultat">
-          <div class="surface lg:sticky lg:top-16 rounded-2xl border border-slate-200/80 bg-white p-7">
+          <div class="surface lg:sticky lg:top-16 rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-7">
 
             <!-- Huvudfokus: månadskostnad -->
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Månadskostnad</p>
@@ -827,7 +853,7 @@
       </div>
 
       <!-- Lånedelar -->
-      <section class="no-print mt-16">
+      <section class="no-print mt-12 sm:mt-16">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h2 class="text-lg font-light tracking-tight text-ink">Lånedelar</h2>
@@ -864,13 +890,13 @@
       </section>
 
       <!-- Förhandsvisning: utveckling över tre år -->
-      <section class="no-print mt-16">
+      <section class="no-print mt-12 sm:mt-16">
         <h2 class="text-lg font-light tracking-tight text-ink">Utveckling &ndash; tre första åren</h2>
         <p class="mt-1 text-sm font-light text-slate-500">
           När skulden amorteras ned sjunker räntan, så månadskostnaden trappar ned något över tid.
         </p>
 
-        <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
+        <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-7">
           <div id="trendStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4"></div>
 
           <div class="mt-7">
@@ -886,14 +912,14 @@
       </section>
 
       <!-- Lagstadgat amorteringskrav -->
-      <section class="no-print mt-16">
+      <section class="no-print mt-12 sm:mt-16">
         <h2 class="text-lg font-light tracking-tight text-ink">Med lagstadgat amorteringskrav</h2>
         <p class="mt-1 text-sm font-light text-slate-500">
           2 % per år tills belåningsgraden når 70 %, därefter 1 % tills 50 %, sedan inget krav.
           Månadskostnaden trappas ned i steg när gränserna passeras.
         </p>
 
-        <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-7">
+        <div class="surface mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-7">
           <div id="amortReqStats" class="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3"></div>
           <div id="amortReqChart" class="mt-7"></div>
           <p class="mt-3 text-xs font-light text-slate-400">Håll muspekaren över &ndash; eller tryck på &ndash; kurvan för att se månadskostnaden vid varje tidpunkt. De streckade linjerna markerar när belåningsgraden passerar 70 % och 50 %.</p>
@@ -905,7 +931,7 @@
 
   <!-- Flytande genväg till sparade kalkyler – alltid synlig -->
   <button id="savedFab" type="button" aria-label="Sparade kalkyler"
-    class="saved-fab no-print fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white transition hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+    class="saved-fab no-print fixed z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand text-white transition hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
     </svg>
