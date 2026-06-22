@@ -1,0 +1,24 @@
+{
+  "name": "Bolånekalkyl",
+  "short_name": "Bolånekalkyl",
+  "description": "Kalkylator för bolån – ränta, amortering och månadskostnad",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#eaf0f2",
+  "theme_color": "#2b6777",
+  "lang": "sv",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
